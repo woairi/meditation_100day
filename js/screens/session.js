@@ -19,10 +19,50 @@ const SOUND_LABELS = {
 
 const HUD_HIDE_DELAY = 6000;
 
+// 호흡 리듬: [라벨, 초, 원 확장 여부]
+const BREATH_PHASES = {
+  '4-4': [['들숨', 4, true], ['날숨', 4, false]],
+  '4-6': [['들숨', 4, true], ['날숨', 6, false]],
+  box: [['들숨', 4, true], ['멈춤', 4, true], ['날숨', 4, false], ['멈춤', 4, false]],
+};
+
 let timer = null;
-let breathInterval = null;
+let breathTimeout = null;
 let hudTimeout = null;
 let previewTimeout = null;
+
+// 호흡 원을 JS로 구동 — 리듬별 길이가 달라 CSS keyframe 고정 주기로는 불가능
+function startBreathing(circle, label, pattern) {
+  const phases = BREATH_PHASES[pattern] || BREATH_PHASES['4-4'];
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let i = 0;
+  const step = () => {
+    const [text, dur, expanded] = phases[i % phases.length];
+    label.textContent = text;
+    if (reduced) {
+      // 모션 최소화: 크기 대신 투명도로 리듬 표현
+      circle.style.transform = 'scale(0.95)';
+      circle.style.transition = `opacity ${dur}s ease-in-out`;
+      circle.style.opacity = expanded ? '1' : '0.55';
+    } else {
+      circle.style.transition = `transform ${dur}s ease-in-out`;
+      circle.style.transform = `scale(${expanded ? 1.18 : 0.72})`;
+    }
+    i += 1;
+    breathTimeout = setTimeout(step, dur * 1000);
+  };
+  step();
+}
+
+function stopBreathing(circle) {
+  clearTimeout(breathTimeout);
+  breathTimeout = null;
+  if (circle) {
+    // 전환 중이던 자리에서 그대로 멈춘다
+    circle.style.transform = getComputedStyle(circle).transform;
+    circle.style.transition = 'none';
+  }
+}
 
 export function mountSession(el) {
   document.body.classList.add('session-active');
@@ -45,8 +85,8 @@ function cleanup() {
     timer.destroy();
     timer = null;
   }
-  clearInterval(breathInterval);
-  breathInterval = null;
+  clearTimeout(breathTimeout);
+  breathTimeout = null;
   clearTimeout(hudTimeout);
   hudTimeout = null;
   clearTimeout(previewTimeout);
@@ -85,7 +125,7 @@ function renderPreroll(el, { guide, isFree, recovered }) {
           <p style="font-size:14px;color:var(--fg-dim);margin-bottom:12px">진행 중이던 명상이 있어요. 이어서 할까요?</p>
           <button id="btn-resume" class="btn-primary" style="padding:12px;font-size:15px">이어서 하기</button>
         </div>` : ''}
-      <button id="btn-begin" class="btn-primary" style="max-width:320px">${canResume ? '처음부터 시작' : '시작하기'}</button>
+      <button id="btn-begin" class="btn-primary" style="max-width:320px">${canResume ? '처음부터 시작' : '시작하기'} · ${DEV_MODE ? '10초' : `${settings.sessionMinutes}분`}</button>
       <a href="#/" class="btn-ghost">돌아가기</a>
     </div>
   `;
@@ -155,15 +195,15 @@ function startMeditation(el, { guide, isFree, resumeFrom }) {
   const durationMs = (DEV_MODE ? 10 : settings.sessionMinutes * 60) * 1000;
 
   requestWakeLock();
-  playBell();
+  playBell(settings.soundVolume);
   startAmbient(settings.soundType, settings.soundVolume);
 
   el.innerHTML = `
     <div class="session-wrap" id="session-tap">
       <div class="session-guide-theme" style="opacity:0.7">${isFree ? '자유 명상' : guide.title}</div>
       <div class="breath-stage">
-        <div class="breath-circle ${settings.breathingGuide ? 'breathing' : ''}" id="breath-circle"></div>
-        <div class="breath-label" id="breath-label">${settings.breathingGuide ? '들숨' : ''}</div>
+        <div class="breath-circle" id="breath-circle"></div>
+        <div class="breath-label" id="breath-label"></div>
       </div>
       <div class="session-hud" id="hud">
         <div class="session-time" id="time">${formatTime(durationMs)}</div>
@@ -199,13 +239,8 @@ function startMeditation(el, { guide, isFree, resumeFrom }) {
   });
   scheduleHudHide();
 
-  // 호흡 라벨: CSS 애니메이션(8초 주기, 0~4초 확대=들숨)과 같은 시점에 시작해 동기화
   if (settings.breathingGuide) {
-    let inhale = true;
-    breathInterval = setInterval(() => {
-      inhale = !inhale;
-      label.textContent = inhale ? '들숨' : '날숨';
-    }, 4000);
+    startBreathing(circle, label, settings.breathPattern);
   }
 
   timer = createTimer({
@@ -230,7 +265,7 @@ function startMeditation(el, { guide, isFree, resumeFrom }) {
       timer.resume();
       resumeAudio();
       pauseBtn.textContent = '일시정지';
-      circle.style.animationPlayState = 'running';
+      if (settings.breathingGuide) startBreathing(circle, label, settings.breathPattern);
       scheduleHudHide();
       // 일시정지 시간만큼 시작점이 밀린 것으로 저장
       store.saveActiveSession({
@@ -242,7 +277,7 @@ function startMeditation(el, { guide, isFree, resumeFrom }) {
       timer.pause();
       stopAmbient();
       pauseBtn.textContent = '계속하기';
-      circle.style.animationPlayState = 'paused';
+      stopBreathing(circle);
       clearTimeout(hudTimeout);
     }
   });
@@ -269,11 +304,12 @@ function startMeditation(el, { guide, isFree, resumeFrom }) {
 
 function completeSession(el, { guide, isFree, durationMs }) {
   store.clearActiveSession();
-  clearInterval(breathInterval);
+  clearTimeout(breathTimeout);
   clearTimeout(hudTimeout);
   stopAmbient();
   releaseWakeLock();
-  playEndBells();
+  playEndBells(store.getSettings().soundVolume);
+  if (navigator.vibrate) navigator.vibrate([120, 80, 120]); // 화면을 안 봐도 끝을 알 수 있게
 
   if (isFree) {
     el.innerHTML = `

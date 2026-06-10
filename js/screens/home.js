@@ -1,6 +1,7 @@
 import * as store from '../store.js';
 import { getGuide } from '../data/guides.js';
 import { icon } from '../icons.js';
+import { shareCard } from '../share.js';
 
 export function mountHome(el) {
   if (store.isComplete()) {
@@ -37,7 +38,8 @@ export function mountHome(el) {
 
     <div class="today-status">
       ${todayDone
-        ? `<div class="today-done">${icon('check', 18)} 오늘의 명상 완료!</div>`
+        ? `<div class="today-done">${icon('check', 18)} 오늘의 명상 완료!</div>
+           <button id="btn-share" class="btn-small" style="margin-top:10px">인증 카드 공유</button>`
         : '<div style="color: var(--fg-dim)">오늘의 명상이 기다리고 있어요</div>'}
     </div>
 
@@ -54,6 +56,18 @@ export function mountHome(el) {
 
   el.querySelector('#btn-start').addEventListener('click', () => {
     location.hash = '#/session';
+  });
+
+  el.querySelector('#btn-share')?.addEventListener('click', () => {
+    const todayCompletion = store.getCompletion(store.todayKey());
+    const [y, m, d] = store.todayKey().split('-');
+    shareCard({
+      day: todayCompletion.day,
+      dateLabel: `${y}.${m}.${d}`,
+      streak,
+      count,
+      total: store.TOTAL_DAYS,
+    });
   });
 }
 

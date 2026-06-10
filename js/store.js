@@ -14,6 +14,7 @@ function freshState() {
       soundType: 'rain',
       soundVolume: 0.5,
       breathingGuide: true,
+      breathPattern: '4-4', // '4-4' | '4-6' | 'box'
       sessionMinutes: 10,
     },
     completions: {},
@@ -36,8 +37,10 @@ function load() {
 function migrate(data) {
   // schemaVersion이 올라가면 여기서 순차 마이그레이션을 수행한다.
   if (!data.schemaVersion || data.schemaVersion < CURRENT_SCHEMA) {
-    return { ...freshState(), ...data, schemaVersion: CURRENT_SCHEMA };
+    data = { ...freshState(), ...data, schemaVersion: CURRENT_SCHEMA };
   }
+  // 같은 스키마 안에서 설정 항목이 추가된 경우 기본값을 채운다.
+  data.settings = { ...freshState().settings, ...data.settings };
   return data;
 }
 
@@ -152,6 +155,41 @@ export function getJournalEntries() {
   return Object.entries(state.completions)
     .map(([date, c]) => ({ date, ...c }))
     .sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+// 총 명상 시간(분)
+export function totalMinutes() {
+  return Math.round(
+    Object.values(state.completions).reduce((sum, c) => sum + (c.durationSec || 0), 0) / 60
+  );
+}
+
+// ---- 백업/복원 ----
+
+export function exportData() {
+  return JSON.stringify(state, null, 2);
+}
+
+// 백업 JSON으로 전체 상태를 교체한다. 형식이 어긋나면 throw.
+export function importData(json) {
+  const data = JSON.parse(json);
+  if (!data || typeof data !== 'object' || typeof data.completions !== 'object' || data.completions === null) {
+    throw new Error('invalid backup');
+  }
+  for (const [key, c] of Object.entries(data.completions)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key) || typeof c !== 'object' || typeof c.day !== 'number') {
+      throw new Error('invalid backup');
+    }
+  }
+  state = migrate(data);
+  save();
+  return Object.keys(state.completions).length;
+}
+
+export function resetData() {
+  state = freshState();
+  save();
+  clearActiveSession();
 }
 
 // ---- 진행 중 세션 복구 ----

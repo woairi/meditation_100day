@@ -39,6 +39,10 @@ function render(el) {
       <div class="stat"><div class="stat-num">${longest}</div><div class="stat-label">최장 연속</div></div>
     </div>
     <div class="card">
+      <div class="card-label">최근 7일 · 총 명상 ${formatMinutes(store.totalMinutes())}</div>
+      <div class="week-strip">${renderWeekStrip(completions)}</div>
+    </div>
+    <div class="card">
       <div class="guide-theme" style="font-size:12px;color:var(--accent);font-weight:700;margin-bottom:10px">100일 챌린지</div>
       <div class="grid-100">${grid}</div>
     </div>
@@ -67,6 +71,27 @@ function render(el) {
       location.hash = `#/journal?date=${cell.dataset.date}`;
     });
   });
+}
+
+function formatMinutes(min) {
+  return min >= 60 ? `${Math.floor(min / 60)}시간 ${min % 60}분` : `${min}분`;
+}
+
+function renderWeekStrip(completions) {
+  const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+  let html = '';
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = store.todayKey(d);
+    const done = key in completions;
+    html += `
+      <div class="wday ${i === 0 ? 'is-today' : ''}">
+        <div class="wdot ${done ? 'done' : ''}"></div>
+        <div class="wlabel">${i === 0 ? '오늘' : DOW[d.getDay()]}</div>
+      </div>`;
+  }
+  return html;
 }
 
 function renderMonth(completions) {

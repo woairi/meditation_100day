@@ -1,6 +1,6 @@
 // cache-first 프리캐시 서비스 워커.
 // 파일을 변경해 배포할 때마다 CACHE_NAME 버전을 올려야 클라이언트가 갱신된다.
-const CACHE_NAME = 'meditation100-v2';
+const CACHE_NAME = 'meditation100-v3';
 
 const ASSETS = [
   './',
@@ -14,6 +14,8 @@ const ASSETS = [
   './js/wakelock.js',
   './js/icons.js',
   './js/ui.js',
+  './js/share.js',
+  './js/screens/settings.js',
   './js/screens/home.js',
   './js/screens/session.js',
   './js/screens/calendar.js',
