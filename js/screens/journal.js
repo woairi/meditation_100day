@@ -1,5 +1,6 @@
 import * as store from '../store.js';
 import { getGuide } from '../data/guides.js';
+import { icon } from '../icons.js';
 
 export function mountJournal(el, params = {}) {
   const entries = store.getJournalEntries();
@@ -8,7 +9,7 @@ export function mountJournal(el, params = {}) {
     el.innerHTML = `
       <h1 class="screen-title">일지</h1>
       <div class="empty-state">
-        <span class="big-emoji">🌱</span>
+        ${icon('sprout', 44)}
         아직 기록이 없어요.<br>첫 명상을 마치면 이곳에 소감이 쌓여요.
       </div>
     `;
