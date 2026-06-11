@@ -41,11 +41,12 @@ export function mountJournal(el, params = {}) {
 function renderItem(e) {
   const guide = getGuide(e.day);
   const [y, m, d] = e.date.split('-');
+  const startTime = e.startedAt ? formatTime(e.startedAt) : '';
   return `
     <div class="journal-item" data-date="${e.date}">
       <div class="j-head">
         <span class="j-day">Day ${e.day}</span>
-        <span class="j-date">${y}.${m}.${d}</span>
+        <span class="j-date">${y}.${m}.${d}${startTime ? ` · ${startTime} 시작` : ''}</span>
       </div>
       <div class="j-theme">${guide.phase} · ${guide.title}</div>
       <div class="j-note ${e.note ? '' : 'empty'}">${e.note ? escapeHtml(e.note) : '소감이 없어요'}</div>
@@ -86,6 +87,12 @@ function enterEdit(item) {
     noteEl.hidden = false;
     editBtn.hidden = false;
   }
+}
+
+function formatTime(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function escapeHtml(s) {

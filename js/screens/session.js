@@ -248,7 +248,12 @@ function startMeditation(el, { guide, isFree, resumeFrom }) {
     onTick: (rem) => {
       timeEl.textContent = formatTime(rem);
     },
-    onComplete: () => completeSession(el, { guide, isFree, durationMs }),
+    onComplete: () => completeSession(el, {
+      guide,
+      isFree,
+      durationMs,
+      startEpoch: timer.state.startEpoch,
+    }),
   });
 
   timer.start(resumeFrom);
@@ -302,7 +307,7 @@ function startMeditation(el, { guide, isFree, resumeFrom }) {
 
 // ---- 4단계: 완료 ----
 
-function completeSession(el, { guide, isFree, durationMs }) {
+function completeSession(el, { guide, isFree, durationMs, startEpoch }) {
   store.clearActiveSession();
   clearTimeout(breathTimeout);
   clearTimeout(hudTimeout);
@@ -337,7 +342,11 @@ function completeSession(el, { guide, isFree, durationMs }) {
   `;
 
   const finish = (note) => {
-    store.recordCompletion({ durationSec: Math.round(durationMs / 1000), note });
+    store.recordCompletion({
+      durationSec: Math.round(durationMs / 1000),
+      note,
+      startedAt: startEpoch ? new Date(startEpoch).toISOString() : null,
+    });
     location.hash = '#/';
   };
 

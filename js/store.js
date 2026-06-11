@@ -102,11 +102,12 @@ export function getCompletion(dateKey) {
 }
 
 // 완료 기록. 같은 날 두 번째 완료는 도장을 추가하지 않는다(자유 명상).
-export function recordCompletion({ durationSec, note = '' }) {
+export function recordCompletion({ durationSec, note = '', startedAt = null }) {
   const key = todayKey();
   if (key in state.completions) return false;
   state.completions[key] = {
     day: getCurrentDay(),
+    startedAt, // 세션 시작 시각 (ISO), 이전 버전 기록에는 없을 수 있음
     completedAt: new Date().toISOString(),
     durationSec,
     note,
