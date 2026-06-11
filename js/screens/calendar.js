@@ -42,6 +42,7 @@ function render(el) {
       <div class="card-label">최근 7일 · 총 명상 ${formatMinutes(store.totalMinutes())}</div>
       <div class="week-strip">${renderWeekStrip(completions)}</div>
     </div>
+    ${renderTimeOfDay(completions)}
     <div class="card">
       <div class="guide-theme" style="font-size:12px;color:var(--accent);font-weight:700;margin-bottom:10px">100일 챌린지</div>
       <div class="grid-100">${grid}</div>
@@ -92,6 +93,47 @@ function renderWeekStrip(completions) {
       </div>`;
   }
   return html;
+}
+
+// 시간대별 명상 횟수: 시작 시각 기준 (없으면 완료 시각으로 대체)
+const TIME_SLOTS = [
+  { label: '새벽', range: '00-06', from: 0, to: 6 },
+  { label: '아침', range: '06-09', from: 6, to: 9 },
+  { label: '오전', range: '09-12', from: 9, to: 12 },
+  { label: '오후', range: '12-18', from: 12, to: 18 },
+  { label: '저녁', range: '18-21', from: 18, to: 21 },
+  { label: '밤', range: '21-24', from: 21, to: 24 },
+];
+
+function renderTimeOfDay(completions) {
+  const counts = TIME_SLOTS.map(() => 0);
+  for (const c of Object.values(completions)) {
+    const d = new Date(c.startedAt || c.completedAt);
+    if (Number.isNaN(d.getTime())) continue;
+    const h = d.getHours();
+    const i = TIME_SLOTS.findIndex((s) => h >= s.from && h < s.to);
+    if (i >= 0) counts[i] += 1;
+  }
+  const total = counts.reduce((a, b) => a + b, 0);
+  if (total === 0) return '';
+
+  const max = Math.max(...counts);
+  const best = TIME_SLOTS[counts.indexOf(max)];
+
+  const rows = TIME_SLOTS.map((slot, i) => `
+    <div class="tod-row ${counts[i] === max && counts[i] > 0 ? 'is-best' : ''}">
+      <span class="tod-label">${slot.label}</span>
+      <span class="tod-track"><span class="tod-bar" style="width:${(counts[i] / max) * 100}%"></span></span>
+      <span class="tod-count">${counts[i] || ''}</span>
+    </div>
+  `).join('');
+
+  return `
+    <div class="card">
+      <div class="card-label">시간대 · 주로 ${best.label}에 명상해요</div>
+      <div class="tod-chart">${rows}</div>
+    </div>
+  `;
 }
 
 function renderMonth(completions) {

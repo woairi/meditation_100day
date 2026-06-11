@@ -632,3 +632,48 @@ textarea, select, input[type="range"] { font-family: inherit; }
 
 .wlabel { font-size: 11px; color: var(--fg-dim); }
 .wday.is-today .wlabel { color: var(--accent); font-weight: 700; }
+
+/* ============ 시간대 통계 ============ */
+.tod-chart { display: flex; flex-direction: column; gap: 8px; }
+
+.tod-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tod-label {
+  width: 34px;
+  font-size: 12px;
+  color: var(--fg-dim);
+  flex-shrink: 0;
+}
+
+.tod-track {
+  flex: 1;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--bg-card-hover);
+  overflow: hidden;
+}
+
+.tod-bar {
+  display: block;
+  height: 100%;
+  border-radius: 7px;
+  background: var(--accent-deep);
+  min-width: 0;
+  transition: width 0.4s ease;
+}
+
+.tod-row.is-best .tod-bar { background: var(--accent); }
+.tod-row.is-best .tod-label { color: var(--accent); font-weight: 700; }
+
+.tod-count {
+  width: 26px;
+  font-size: 12px;
+  color: var(--fg-dim);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}

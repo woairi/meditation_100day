@@ -1,6 +1,6 @@
 // cache-first 프리캐시 서비스 워커.
 // 파일을 변경해 배포할 때마다 CACHE_NAME 버전을 올려야 클라이언트가 갱신된다.
-const CACHE_NAME = 'meditation100-v4';
+const CACHE_NAME = 'meditation100-v5';
 
 const ASSETS = [
   './',
