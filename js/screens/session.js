@@ -13,6 +13,10 @@ const SOUND_LABELS = {
   none: '없음',
   rain: '빗소리',
   waves: '파도',
+  stream: '시냇물',
+  forest: '숲/새소리',
+  campfire: '모닥불',
+  bowl: '싱잉볼',
   white: '백색소음',
   brown: '갈색소음',
 };
