@@ -45,10 +45,10 @@ export function createTimer({ durationMs, onTick, onComplete }) {
   document.addEventListener('visibilitychange', onVisible);
 
   return {
-    start(resumeFrom = null) {
-      // resumeFrom: 크래시 복구 시 기존 시작 시각/일시정지 누적값으로 이어가기
-      startEpoch = resumeFrom?.startEpoch ?? Date.now();
-      pausedTotal = resumeFrom?.pausedTotal ?? 0;
+    start({ elapsedMs = 0 } = {}) {
+      // elapsedMs: 복구 시 이미 경과한 명상 시간(통화 등으로 멈춰 있던 시간은 제외)
+      startEpoch = Date.now() - elapsedMs;
+      pausedTotal = 0;
       pausedAt = null;
       completed = false;
       startLoop();

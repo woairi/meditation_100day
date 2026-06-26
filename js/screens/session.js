@@ -30,10 +30,13 @@ const BREATH_PHASES = {
   box: [['들숨', 4, true], ['멈춤', 4, true], ['날숨', 4, false], ['멈춤', 4, false]],
 };
 
+const RESUME_WINDOW_MS = 60 * 60 * 1000; // 1시간 내 중단된 세션만 복구 제안
+
 let timer = null;
 let breathTimeout = null;
 let hudTimeout = null;
 let previewTimeout = null;
+let visHandler = null; // 백그라운드 진입 시 자동 일시정지 핸들러
 
 // 호흡 원을 JS로 구동 — 리듬별 길이가 달라 CSS keyframe 고정 주기로는 불가능
 function startBreathing(circle, label, pattern) {
@@ -89,6 +92,10 @@ function cleanup() {
     timer.destroy();
     timer = null;
   }
+  if (visHandler) {
+    document.removeEventListener('visibilitychange', visHandler);
+    visHandler = null;
+  }
   clearTimeout(breathTimeout);
   breathTimeout = null;
   clearTimeout(hudTimeout);
@@ -102,8 +109,12 @@ function cleanup() {
 // ---- 1단계: 시작 전 (가이드 + 사운드 설정 + 시작 버튼 = 오디오 잠금 해제 제스처) ----
 
 function renderPreroll(el, { guide, isFree, recovered }) {
-  const canResume = recovered && Date.now() - recovered.startEpoch < 60 * 60 * 1000;
+  const canResume = recovered
+    && typeof recovered.remainingMs === 'number'
+    && recovered.remainingMs > 0
+    && Date.now() - (recovered.savedAt || 0) < RESUME_WINDOW_MS;
   const settings = store.getSettings();
+  const resumeLabel = canResume ? formatTime(recovered.remainingMs) : '';
 
   el.innerHTML = `
     <div class="session-wrap">
@@ -126,7 +137,7 @@ function renderPreroll(el, { guide, isFree, recovered }) {
       </div>
       ${canResume ? `
         <div class="card" style="max-width:320px;width:100%;margin-bottom:0">
-          <p style="font-size:14px;color:var(--fg-dim);margin-bottom:12px">진행 중이던 명상이 있어요. 이어서 할까요?</p>
+          <p style="font-size:14px;color:var(--fg-dim);margin-bottom:12px">진행 중이던 명상이 있어요.<br>${resumeLabel} 남은 지점부터 이어서 할까요?</p>
           <button id="btn-resume" class="btn-primary" style="padding:12px;font-size:15px">이어서 하기</button>
         </div>` : ''}
       <button id="btn-begin" class="btn-primary" style="max-width:320px">${canResume ? '처음부터 시작' : '시작하기'} · ${DEV_MODE ? '10초' : `${settings.sessionMinutes}분`}</button>
@@ -151,17 +162,22 @@ function renderPreroll(el, { guide, isFree, recovered }) {
     clearTimeout(previewTimeout);
     stopAmbient();
     store.clearActiveSession();
-    beginCountdown(el, { guide, isFree, resumeFrom: null });
+    beginCountdown(el, { guide, isFree, resume: null });
   });
 
   if (canResume) {
     el.querySelector('#btn-resume').addEventListener('click', () => {
       clearTimeout(previewTimeout);
       stopAmbient();
+      // 버튼 탭은 사용자 제스처라 오디오 재생이 허용된다 → 바로 명상 진행
       startMeditation(el, {
         guide,
         isFree,
-        resumeFrom: { startEpoch: recovered.startEpoch, pausedTotal: recovered.pausedTotal || 0 },
+        resume: {
+          durationMs: recovered.durationMs,
+          elapsedMs: Math.max(0, recovered.durationMs - recovered.remainingMs),
+          startedAtISO: recovered.startedAtISO || null,
+        },
       });
     });
   }
@@ -187,19 +203,22 @@ function beginCountdown(el, opts) {
       clearInterval(cd);
       startMeditation(el, opts);
     } else {
-      el.querySelector('#countdown').textContent = n;
+      const cdEl = el.querySelector('#countdown');
+      if (cdEl) cdEl.textContent = n;
     }
   }, 1000);
 }
 
 // ---- 3단계: 명상 진행 ----
 
-function startMeditation(el, { guide, isFree, resumeFrom }) {
+function startMeditation(el, { guide, isFree, resume }) {
   const settings = store.getSettings();
-  const durationMs = (DEV_MODE ? 10 : settings.sessionMinutes * 60) * 1000;
+  const durationMs = resume ? resume.durationMs : (DEV_MODE ? 10 : settings.sessionMinutes * 60) * 1000;
+  // 시작 시각: 새 세션은 지금, 복구 세션은 원래 시작 시각을 이어받는다
+  const startedAtISO = resume?.startedAtISO || new Date().toISOString();
 
   requestWakeLock();
-  playBell(settings.soundVolume);
+  if (!resume) playBell(settings.soundVolume); // 복구 시에는 시작 종을 다시 울리지 않음
   startAmbient(settings.soundType, settings.soundVolume);
 
   el.innerHTML = `
@@ -247,49 +266,72 @@ function startMeditation(el, { guide, isFree, resumeFrom }) {
     startBreathing(circle, label, settings.breathPattern);
   }
 
+  // 현재 남은 시간을 동결해 저장 → 페이지가 종료돼도 그 지점부터 복구된다.
+  // 통화 등으로 멈춰 있던 시간은 경과로 치지 않는다(자동 일시정지가 보장).
+  let lastPersist = 0;
+  const persistProgress = () => {
+    if (!timer) return;
+    store.saveActiveSession({
+      day: guide.day,
+      durationMs,
+      remainingMs: timer.remaining(),
+      startedAtISO,
+      savedAt: Date.now(),
+    });
+  };
+
   timer = createTimer({
     durationMs,
     onTick: (rem) => {
       timeEl.textContent = formatTime(rem);
+      // 5초마다 진행 상태를 저장(포그라운드에서 강제 종료되는 드문 경우 대비)
+      const now = Date.now();
+      if (now - lastPersist > 5000) {
+        lastPersist = now;
+        persistProgress();
+      }
     },
-    onComplete: () => completeSession(el, {
-      guide,
-      isFree,
-      durationMs,
-      startEpoch: timer.state.startEpoch,
-    }),
+    onComplete: () => completeSession(el, { guide, isFree, durationMs, startedAtISO }),
   });
 
-  timer.start(resumeFrom);
+  timer.start(resume ? { elapsedMs: resume.elapsedMs } : {});
+  persistProgress();
 
-  // 크래시 복구용으로 시작 시각 저장
-  store.saveActiveSession({
-    startEpoch: timer.state.startEpoch,
-    pausedTotal: timer.state.pausedTotal,
-    day: guide.day,
-  });
+  const doPause = () => {
+    if (!timer || timer.isPaused) return;
+    timer.pause();
+    stopAmbient(); // 배경음 정지(스케줄러도 정리). 재개 시 다시 시작한다
+    stopBreathing(circle);
+    pauseBtn.textContent = '계속하기';
+    clearTimeout(hudTimeout);
+    hud.classList.remove('hud-hidden'); // 멈추면 컨트롤을 보이게
+    persistProgress();
+  };
+
+  const doResume = () => {
+    if (!timer || !timer.isPaused) return;
+    timer.resume();
+    resumeAudio();
+    startAmbient(settings.soundType, settings.soundVolume); // 배경음 다시 시작
+    pauseBtn.textContent = '일시정지';
+    if (settings.breathingGuide) startBreathing(circle, label, settings.breathPattern);
+    scheduleHudHide();
+    persistProgress();
+  };
 
   pauseBtn.addEventListener('click', () => {
-    if (timer.isPaused) {
-      timer.resume();
-      resumeAudio();
-      pauseBtn.textContent = '일시정지';
-      if (settings.breathingGuide) startBreathing(circle, label, settings.breathPattern);
-      scheduleHudHide();
-      // 일시정지 시간만큼 시작점이 밀린 것으로 저장
-      store.saveActiveSession({
-        startEpoch: timer.state.startEpoch,
-        pausedTotal: timer.state.pausedTotal,
-        day: guide.day,
-      });
-    } else {
-      timer.pause();
-      stopAmbient();
-      pauseBtn.textContent = '계속하기';
-      stopBreathing(circle);
-      clearTimeout(hudTimeout);
-    }
+    if (timer.isPaused) doResume();
+    else doPause();
   });
+
+  // 전화 수신·앱 전환 등으로 백그라운드에 가면 자동 일시정지 →
+  // 통화 시간이 명상 시간에서 깎이지 않고, 종료돼도 남은 시간이 저장된다.
+  visHandler = () => {
+    if (document.visibilityState === 'hidden' && timer && !timer.isPaused) {
+      doPause();
+    }
+  };
+  document.addEventListener('visibilitychange', visHandler);
 
   el.querySelector('#btn-quit').addEventListener('click', async () => {
     clearTimeout(hudTimeout);
@@ -311,7 +353,7 @@ function startMeditation(el, { guide, isFree, resumeFrom }) {
 
 // ---- 4단계: 완료 ----
 
-function completeSession(el, { guide, isFree, durationMs, startEpoch }) {
+function completeSession(el, { guide, isFree, durationMs, startedAtISO }) {
   store.clearActiveSession();
   clearTimeout(breathTimeout);
   clearTimeout(hudTimeout);
@@ -349,7 +391,7 @@ function completeSession(el, { guide, isFree, durationMs, startEpoch }) {
     store.recordCompletion({
       durationSec: Math.round(durationMs / 1000),
       note,
-      startedAt: startEpoch ? new Date(startEpoch).toISOString() : null,
+      startedAt: startedAtISO,
     });
     location.hash = '#/';
   };
