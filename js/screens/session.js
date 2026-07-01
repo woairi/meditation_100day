@@ -266,8 +266,7 @@ function startMeditation(el, { guide, isFree, resume }) {
     startBreathing(circle, label, settings.breathPattern);
   }
 
-  // 현재 남은 시간을 동결해 저장 → 페이지가 종료돼도 그 지점부터 복구된다.
-  // 통화 등으로 멈춰 있던 시간은 경과로 치지 않는다(자동 일시정지가 보장).
+  // 현재 남은 시간을 저장 → 페이지가 종료돼도 그 지점부터 복구된다.
   let lastPersist = 0;
   const persistProgress = () => {
     if (!timer) return;
@@ -324,12 +323,14 @@ function startMeditation(el, { guide, isFree, resume }) {
     else doPause();
   });
 
-  // 전화 수신·앱 전환 등으로 백그라운드에 가면 자동 일시정지 →
-  // 통화 시간이 명상 시간에서 깎이지 않고, 종료돼도 남은 시간이 저장된다.
+  // 화면을 끄거나 앱을 전환해 백그라운드에 가더라도 타이머는 계속 흐른다
+  // (화면 끄고 눈 감고 명상하는 경우를 위해 자동 일시정지하지 않는다).
+  // 대신 그 순간의 남은 시간을 저장해 두어, 앱이 종료되면 그 지점부터 복구한다.
+  // 돌아오면 오디오 컨텍스트를 다시 깨운다(OS가 중단시켰을 수 있음).
   visHandler = () => {
-    if (document.visibilityState === 'hidden' && timer && !timer.isPaused) {
-      doPause();
-    }
+    if (!timer || timer.isPaused) return;
+    if (document.visibilityState === 'hidden') persistProgress();
+    else resumeAudio();
   };
   document.addEventListener('visibilitychange', visHandler);
 
