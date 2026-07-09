@@ -4,7 +4,7 @@ name: Deploy to GitHub Pages
 # gh-pages 브랜치 방식을 사용한다: 이 브랜치에 푸시하면 GitHub가 자동으로 빌드/배포한다.
 on:
   push:
-    branches: [claude/100day-meditation-app-7mmdr1]
+    branches: [main]
   workflow_dispatch:
 
 permissions:

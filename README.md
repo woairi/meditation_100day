@@ -29,10 +29,10 @@ python3 -m http.server 8000
 
 ## 배포 (GitHub Pages)
 
-모든 경로가 상대 경로라 별도 설정 없이 동작합니다:
+모든 경로가 상대 경로라 별도 설정 없이 동작합니다. `main` 브랜치에 push하면 GitHub Actions(`.github/workflows/deploy-pages.yml`)가 자동으로 `gh-pages` 브랜치에 미러링합니다.
 
-1. 저장소 Settings → Pages → "Deploy from a branch" 선택
-2. 브랜치와 루트(`/`) 지정 후 저장
+1. 저장소 Settings → Pages에서 Source를 "Deploy from a branch"로, 브랜치는 `gh-pages` / 루트(`/`)로 지정
+2. 이후 `main`에 push하면 자동 배포되며, Actions 탭에서 `workflow_dispatch`로 수동 실행도 가능합니다
 
 파일을 변경해 배포할 때는 `sw.js`의 `CACHE_NAME` 버전을 올려야 클라이언트 캐시가 갱신됩니다.
 
