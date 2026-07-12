@@ -1,10 +1,13 @@
 import * as store from '../store.js';
 import { showConfirm } from '../ui.js';
+import * as notify from '../notify.js';
 
 const BREATH_LABELS = {
   '4-4': '기본 (들숨 4초 · 날숨 4초)',
   '4-6': '이완 (들숨 4초 · 날숨 6초)',
   box: '박스 호흡 (4·4·4·4)',
+  '4-7-8': '4-7-8 (들숨4 · 멈춤7 · 날숨8)',
+  coherent: '코히런트 (들숨 5.5초 · 날숨 5.5초)',
 };
 
 export function mountSettings(el) {
@@ -38,6 +41,19 @@ export function mountSettings(el) {
     </div>
 
     <div class="card">
+      <div class="card-label">알림</div>
+      <div class="setting-row">
+        <label for="set-reminder">일일 명상 알림</label>
+        <input type="checkbox" id="set-reminder" class="switch" ${s.reminderEnabled ? 'checked' : ''}>
+      </div>
+      <div class="setting-row" id="row-reminder-time" ${s.reminderEnabled ? '' : 'hidden'}>
+        <label for="set-reminder-time">알림 시각</label>
+        <input type="time" id="set-reminder-time" class="time-input" value="${s.reminderTime}">
+      </div>
+      <p class="setting-hint" id="reminder-hint"></p>
+    </div>
+
+    <div class="card">
       <div class="card-label">데이터</div>
       <p class="setting-hint">기록은 이 기기에만 저장돼요. 기기를 바꾸거나 브라우저 데이터를 지우기 전에 백업해 두세요.</p>
       <div class="setting-actions">
@@ -60,6 +76,38 @@ export function mountSettings(el) {
 
   el.querySelector('#set-pattern').addEventListener('change', (e) => {
     store.updateSettings({ breathPattern: e.target.value });
+  });
+
+  // 알림 토글: 켜면 권한 요청 → 실패 시 스위치 원상복구
+  const reminderToggle = el.querySelector('#set-reminder');
+  const reminderRow = el.querySelector('#row-reminder-time');
+  const reminderHint = el.querySelector('#reminder-hint');
+  const refreshHint = () => { reminderHint.textContent = notify.reminderStatusText(); };
+  refreshHint();
+
+  reminderToggle.addEventListener('change', async (e) => {
+    if (e.target.checked) {
+      const ok = await notify.enableReminder(store.getSettings().reminderTime);
+      if (!ok) {
+        e.target.checked = false;
+        await showConfirm({
+          message: '알림 권한이 없어 켤 수 없어요.<br>브라우저 설정에서 이 사이트의 알림을 허용해 주세요.',
+          confirmText: '확인', cancelText: '닫기',
+        });
+      } else {
+        reminderRow.hidden = false;
+      }
+    } else {
+      await notify.disableReminder();
+      reminderRow.hidden = true;
+    }
+    refreshHint();
+  });
+
+  el.querySelector('#set-reminder-time').addEventListener('change', async (e) => {
+    store.updateSettings({ reminderTime: e.target.value });
+    if (store.getSettings().reminderEnabled) await notify.enableReminder(e.target.value);
+    refreshHint();
   });
 
   // 백업 내보내기: JSON 파일 다운로드

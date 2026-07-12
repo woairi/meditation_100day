@@ -5,6 +5,8 @@ import { playBell, playEndBells, startAmbient, stopAmbient, setAmbientVolume, re
 import { requestWakeLock, releaseWakeLock } from '../wakelock.js';
 import { icon } from '../icons.js';
 import { showConfirm } from '../ui.js';
+import { moodPickerHTML, wireMoodPicker } from '../mood.js';
+import * as notify from '../notify.js';
 
 // ?dev 쿼리로 10초 세션 허용 (검증용)
 const DEV_MODE = new URLSearchParams(location.search).has('dev');
@@ -28,6 +30,8 @@ const BREATH_PHASES = {
   '4-4': [['들숨', 4, true], ['날숨', 4, false]],
   '4-6': [['들숨', 4, true], ['날숨', 6, false]],
   box: [['들숨', 4, true], ['멈춤', 4, true], ['날숨', 4, false], ['멈춤', 4, false]],
+  '4-7-8': [['들숨', 4, true], ['멈춤', 7, true], ['날숨', 8, false]],
+  coherent: [['들숨', 5.5, true], ['날숨', 5.5, false]],
 };
 
 const RESUME_WINDOW_MS = 60 * 60 * 1000; // 1시간 내 중단된 세션만 복구 제안
@@ -135,6 +139,10 @@ function renderPreroll(el, { guide, isFree, recovered }) {
           <input id="sound-volume" type="range" min="0" max="1" step="0.05" value="${settings.soundVolume}">
         </div>
       </div>
+      ${isFree ? '' : `
+        <div class="card" style="max-width:320px;width:100%;margin-bottom:0">
+          ${moodPickerHTML('pre-mood', '지금 마음 상태는 어떤가요? (선택)')}
+        </div>`}
       ${canResume ? `
         <div class="card" style="max-width:320px;width:100%;margin-bottom:0">
           <p style="font-size:14px;color:var(--fg-dim);margin-bottom:12px">진행 중이던 명상이 있어요.<br>${resumeLabel} 남은 지점부터 이어서 할까요?</p>
@@ -144,6 +152,8 @@ function renderPreroll(el, { guide, isFree, recovered }) {
       <a href="#/" class="btn-ghost">돌아가기</a>
     </div>
   `;
+
+  const getPreMood = wireMoodPicker(el, 'pre-mood');
 
   // 사운드 변경 시 3초 미리듣기 (select 변경도 사용자 제스처라 AudioContext 생성 가능)
   el.querySelector('#sound-type').addEventListener('change', (e) => {
@@ -162,7 +172,7 @@ function renderPreroll(el, { guide, isFree, recovered }) {
     clearTimeout(previewTimeout);
     stopAmbient();
     store.clearActiveSession();
-    beginCountdown(el, { guide, isFree, resume: null });
+    beginCountdown(el, { guide, isFree, resume: null, preMood: getPreMood() });
   });
 
   if (canResume) {
@@ -178,6 +188,7 @@ function renderPreroll(el, { guide, isFree, recovered }) {
           elapsedMs: Math.max(0, recovered.durationMs - recovered.remainingMs),
           startedAtISO: recovered.startedAtISO || null,
         },
+        preMood: null, // 복구 세션은 시작 전 마음 상태를 다시 묻지 않는다
       });
     });
   }
@@ -211,7 +222,7 @@ function beginCountdown(el, opts) {
 
 // ---- 3단계: 명상 진행 ----
 
-function startMeditation(el, { guide, isFree, resume }) {
+function startMeditation(el, { guide, isFree, resume, preMood }) {
   const settings = store.getSettings();
   const durationMs = resume ? resume.durationMs : (DEV_MODE ? 10 : settings.sessionMinutes * 60) * 1000;
   // 시작 시각: 새 세션은 지금, 복구 세션은 원래 시작 시각을 이어받는다
@@ -290,7 +301,7 @@ function startMeditation(el, { guide, isFree, resume }) {
         persistProgress();
       }
     },
-    onComplete: () => completeSession(el, { guide, isFree, durationMs, startedAtISO }),
+    onComplete: () => completeSession(el, { guide, isFree, durationMs, startedAtISO, preMood }),
   });
 
   timer.start(resume ? { elapsedMs: resume.elapsedMs } : {});
@@ -354,7 +365,7 @@ function startMeditation(el, { guide, isFree, resume }) {
 
 // ---- 4단계: 완료 ----
 
-function completeSession(el, { guide, isFree, durationMs, startedAtISO }) {
+function completeSession(el, { guide, isFree, durationMs, startedAtISO, preMood }) {
   store.clearActiveSession();
   clearTimeout(breathTimeout);
   clearTimeout(hudTimeout);
@@ -381,19 +392,25 @@ function completeSession(el, { guide, isFree, durationMs, startedAtISO }) {
       <div class="session-guide-title">Day ${guide.day} 완료!</div>
       <div class="reflection-box">
         <p class="session-guide-text" style="margin-bottom:10px">오늘의 명상은 어땠나요?</p>
-        <textarea id="note" placeholder="짧게 소감을 남겨보세요 (선택)"></textarea>
+        ${moodPickerHTML('post-mood', '명상 후 마음 상태 (선택)')}
+        <textarea id="note" placeholder="짧게 소감을 남겨보세요 (선택)" style="margin-top:12px"></textarea>
         <button id="btn-save" class="btn-primary">저장</button>
         <button id="btn-skip" class="btn-ghost">건너뛰기</button>
       </div>
     </div>
   `;
 
+  const getPostMood = wireMoodPicker(el, 'post-mood');
+
   const finish = (note) => {
     store.recordCompletion({
       durationSec: Math.round(durationMs / 1000),
       note,
       startedAt: startedAtISO,
+      moodBefore: preMood ?? null,
+      moodAfter: getPostMood(),
     });
+    notify.syncReminderMeta(); // 오늘 완료 → 리마인더가 다시 울리지 않도록 메타 갱신
     location.hash = '#/';
   };
 

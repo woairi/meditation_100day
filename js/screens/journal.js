@@ -1,4 +1,5 @@
 import * as store from '../store.js';
+import { MOOD_LABELS } from '../store.js';
 import { getGuide } from '../data/guides.js';
 import { icon } from '../icons.js';
 
@@ -49,6 +50,7 @@ function renderItem(e) {
         <span class="j-date">${y}.${m}.${d}${startTime ? ` · ${startTime} 시작` : ''}</span>
       </div>
       <div class="j-theme">${guide.phase} · ${guide.title}</div>
+      ${moodLine(e.moodBefore, e.moodAfter)}
       <div class="j-note ${e.note ? '' : 'empty'}">${e.note ? escapeHtml(e.note) : '소감이 없어요'}</div>
       <button class="btn-small btn-edit" style="margin-top:10px">${e.note ? '수정' : '소감 쓰기'}</button>
     </div>
@@ -87,6 +89,17 @@ function enterEdit(item) {
     noteEl.hidden = false;
     editBtn.hidden = false;
   }
+}
+
+// 명상 전/후 마음 상태 표시 (둘 다 없으면 표시 안 함 — 이전 기록 호환)
+function moodLine(before, after) {
+  if (!before && !after) return '';
+  const label = (v) => (v ? MOOD_LABELS[v - 1] : '—');
+  let text;
+  if (before && after) text = `${label(before)} → ${label(after)}`;
+  else if (after) text = `명상 후 ${label(after)}`;
+  else text = `명상 전 ${label(before)}`;
+  return `<div class="j-mood">마음 상태 · ${text}</div>`;
 }
 
 function formatTime(iso) {

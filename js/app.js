@@ -4,6 +4,7 @@ import { mountCalendar } from './screens/calendar.js';
 import { mountJournal } from './screens/journal.js';
 import { mountSettings } from './screens/settings.js';
 import * as store from './store.js';
+import * as notify from './notify.js';
 
 const routes = {
   '': { el: 'screen-home', mount: mountHome },
@@ -61,7 +62,9 @@ if (resumable && parseHash().name === '') {
 
 if ('serviceWorker' in navigator) {
   // 상대 경로 필수 — GitHub Pages 서브패스(/meditation/)에서 동작해야 한다
-  navigator.serviceWorker.register('./sw.js').catch(() => {});
+  navigator.serviceWorker.register('./sw.js')
+    .then(() => notify.init())
+    .catch(() => {});
 }
 
 // 브라우저가 용량 정리 시 기록을 임의로 지우지 않도록 보호 요청 (미지원 시 무시)

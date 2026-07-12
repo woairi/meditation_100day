@@ -370,6 +370,57 @@ textarea, select, input[type="range"] { font-family: inherit; }
 
 .reflection-box textarea:focus { outline: 2px solid var(--accent); }
 
+/* ============ 마음 상태(기분) 체크인 ============ */
+.mood-picker { text-align: center; }
+
+.mood-title { font-size: 14px; color: var(--fg-dim); margin-bottom: 12px; }
+
+.mood-dots { display: flex; justify-content: center; gap: 12px; }
+
+.mood-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-card-hover);
+  border: 2px solid transparent;
+  transition: transform 0.1s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.mood-dot:active { transform: scale(0.9); }
+.mood-dot.selected { background: var(--accent); border-color: var(--accent); }
+
+.mood-scale {
+  display: flex;
+  justify-content: space-between;
+  max-width: 208px;
+  margin: 8px auto 0;
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+
+.mood-current {
+  font-size: 13px;
+  color: var(--accent);
+  min-height: 18px;
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+.time-input {
+  background: var(--bg-card-hover);
+  color: var(--fg);
+  border: none;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.journal-item .j-mood {
+  font-size: 12px;
+  color: var(--fg-dim);
+  margin-bottom: 8px;
+}
+
 /* ============ 달력 ============ */
 .stats-row {
   display: flex;

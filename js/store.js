@@ -6,6 +6,9 @@ const SESSION_KEY = 'meditation100.activeSession';
 const CURRENT_SCHEMA = 1;
 export const TOTAL_DAYS = 100;
 
+// 마음 상태 5단계(값 1~5). 이모지 대신 텍스트 라벨 — 다크 테마 톤 유지.
+export const MOOD_LABELS = ['매우 나쁨', '나쁨', '보통', '좋음', '매우 좋음'];
+
 function freshState() {
   return {
     schemaVersion: CURRENT_SCHEMA,
@@ -14,8 +17,10 @@ function freshState() {
       soundType: 'rain',
       soundVolume: 0.5,
       breathingGuide: true,
-      breathPattern: '4-4', // '4-4' | '4-6' | 'box'
+      breathPattern: '4-4', // '4-4' | '4-6' | 'box' | '4-7-8' | 'coherent'
       sessionMinutes: 10,
+      reminderEnabled: false,
+      reminderTime: '08:00',
     },
     completions: {},
   };
@@ -102,7 +107,7 @@ export function getCompletion(dateKey) {
 }
 
 // 완료 기록. 같은 날 두 번째 완료는 도장을 추가하지 않는다(자유 명상).
-export function recordCompletion({ durationSec, note = '', startedAt = null }) {
+export function recordCompletion({ durationSec, note = '', startedAt = null, moodBefore = null, moodAfter = null }) {
   const key = todayKey();
   if (key in state.completions) return false;
   state.completions[key] = {
@@ -111,6 +116,8 @@ export function recordCompletion({ durationSec, note = '', startedAt = null }) {
     completedAt: new Date().toISOString(),
     durationSec,
     note,
+    moodBefore, // 명상 전 마음 상태 (1~5), 미입력 시 null
+    moodAfter, // 명상 후 마음 상태 (1~5), 미입력 시 null
   };
   if (!state.startedAt) state.startedAt = key;
   save();
