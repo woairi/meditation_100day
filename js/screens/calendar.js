@@ -1,4 +1,5 @@
 import * as store from '../store.js';
+import { getGuide } from '../data/guides.js';
 
 let viewYear, viewMonth; // 월별 달력 현재 표시 월
 
@@ -26,8 +27,9 @@ function render(el) {
   let grid = '';
   for (let d = 1; d <= store.TOTAL_DAYS; d++) {
     const done = d in dayToDate;
+    const p = Math.floor((d - 1) / 10); // 10일 단위 테마 밴드 (0~9)
     grid += done
-      ? `<button class="grid-cell done" data-date="${dayToDate[d]}">${d}</button>`
+      ? `<button class="grid-cell done phase-${p}" data-date="${dayToDate[d]}">${d}</button>`
       : `<div class="grid-cell ${d === nextDay ? 'today-next' : ''}">${d}</div>`;
   }
 
@@ -44,7 +46,8 @@ function render(el) {
     </div>
     ${renderTimeOfDay(completions)}
     <div class="card">
-      <div class="guide-theme" style="font-size:12px;color:var(--accent);font-weight:700;margin-bottom:10px">100일 챌린지</div>
+      <div class="guide-theme" style="font-size:12px;color:var(--accent);font-weight:700;margin-bottom:10px">100일 챌린지 · 10단계 여정</div>
+      ${renderPhaseLegend()}
       <div class="grid-100">${grid}</div>
     </div>
     <div class="card">
@@ -76,6 +79,16 @@ function render(el) {
 
 function formatMinutes(min) {
   return min >= 60 ? `${Math.floor(min / 60)}시간 ${min % 60}분` : `${min}분`;
+}
+
+// 10단계 테마 색 범례 — 100칸 그리드의 색 밴드 의미를 설명한다.
+function renderPhaseLegend() {
+  let items = '';
+  for (let k = 0; k < 10; k++) {
+    const phase = getGuide(k * 10 + 1).phase;
+    items += `<span class="phase-legend-item"><span class="phase-dot phase-${k}"></span>${phase}</span>`;
+  }
+  return `<div class="phase-legend">${items}</div>`;
 }
 
 function renderWeekStrip(completions) {

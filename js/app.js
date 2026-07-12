@@ -5,6 +5,7 @@ import { mountJournal } from './screens/journal.js';
 import { mountSettings } from './screens/settings.js';
 import * as store from './store.js';
 import * as notify from './notify.js';
+import { maybeShowOnboarding } from './onboarding.js';
 
 const routes = {
   '': { el: 'screen-home', mount: mountHome },
@@ -58,6 +59,7 @@ if (resumable && parseHash().name === '') {
   location.hash = '#/session'; // hashchange가 navigate를 호출
 } else {
   navigate();
+  maybeShowOnboarding(); // 첫 방문 안내 (복구 세션이 없을 때만)
 }
 
 if ('serviceWorker' in navigator) {

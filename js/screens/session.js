@@ -203,7 +203,8 @@ function beginCountdown(el, opts) {
   el.innerHTML = `
     <div class="session-wrap">
       <div class="session-guide-text">곧 시작합니다. 편안한 자세를 찾으세요.</div>
-      <div class="countdown-number" id="countdown">5</div>
+      <div class="countdown-number" id="countdown" aria-live="assertive" aria-label="시작까지 5초">5</div>
+      <button id="btn-skip-cd" class="btn-ghost">바로 시작</button>
     </div>
   `;
 
@@ -215,9 +216,17 @@ function beginCountdown(el, opts) {
       startMeditation(el, opts);
     } else {
       const cdEl = el.querySelector('#countdown');
-      if (cdEl) cdEl.textContent = n;
+      if (cdEl) {
+        cdEl.textContent = n;
+        cdEl.setAttribute('aria-label', `시작까지 ${n}초`);
+      }
     }
   }, 1000);
+
+  el.querySelector('#btn-skip-cd').addEventListener('click', () => {
+    clearInterval(cd);
+    startMeditation(el, opts);
+  });
 }
 
 // ---- 3단계: 명상 진행 ----
@@ -240,7 +249,8 @@ function startMeditation(el, { guide, isFree, resume, preMood }) {
         <div class="breath-label" id="breath-label"></div>
       </div>
       <div class="session-hud" id="hud">
-        <div class="session-time" id="time">${formatTime(durationMs)}</div>
+        <div class="session-time" id="time" role="timer" aria-label="남은 시간 ${formatTime(durationMs)}">${formatTime(durationMs)}</div>
+        <div class="sr-only" id="time-sr" aria-live="polite"></div>
         <div class="session-controls">
           <button id="btn-pause" class="btn-primary" style="background:var(--bg-card-hover);color:var(--fg)">일시정지</button>
           <button id="btn-quit" class="btn-primary" style="background:var(--bg-card);color:var(--danger)">그만하기</button>
@@ -250,10 +260,12 @@ function startMeditation(el, { guide, isFree, resume, preMood }) {
   `;
 
   const timeEl = el.querySelector('#time');
+  const srEl = el.querySelector('#time-sr');
   const pauseBtn = el.querySelector('#btn-pause');
   const circle = el.querySelector('#breath-circle');
   const label = el.querySelector('#breath-label');
   const hud = el.querySelector('#hud');
+  let lastAnnouncedMin = -1; // 스크린리더 과잉 낭독 방지: 분이 바뀔 때만 알림
 
   // 몰입 모드: 몇 초 뒤 HUD를 숨기고, 화면 탭으로 다시 표시 (일시정지 중에는 항상 표시)
   const scheduleHudHide = () => {
@@ -294,6 +306,13 @@ function startMeditation(el, { guide, isFree, resume, preMood }) {
     durationMs,
     onTick: (rem) => {
       timeEl.textContent = formatTime(rem);
+      timeEl.setAttribute('aria-label', `남은 시간 ${formatTime(rem)}`);
+      // 분이 바뀔 때만 스크린리더에 알림 (매초 낭독 방지)
+      const min = Math.ceil(rem / 60000);
+      if (min !== lastAnnouncedMin) {
+        lastAnnouncedMin = min;
+        srEl.textContent = min > 0 ? `${min}분 남음` : '';
+      }
       // 5초마다 진행 상태를 저장(포그라운드에서 강제 종료되는 드문 경우 대비)
       const now = Date.now();
       if (now - lastPersist > 5000) {
