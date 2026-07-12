@@ -36,6 +36,18 @@ const BREATH_PHASES = {
 
 const RESUME_WINDOW_MS = 60 * 60 * 1000; // 1시간 내 중단된 세션만 복구 제안
 
+// 중간 종을 울릴 경과 시간(ms) 목록. 종료 종과 겹치지 않도록 durationMs 미만만.
+function computeIntervalBells(mode, durationMs) {
+  const times = [];
+  if (mode === 'half') {
+    if (durationMs > 2000) times.push(durationMs / 2);
+  } else if (mode === '5' || mode === '10') {
+    const step = parseInt(mode, 10) * 60 * 1000;
+    for (let t = step; t < durationMs; t += step) times.push(t);
+  }
+  return times;
+}
+
 let timer = null;
 let breathTimeout = null;
 let hudTimeout = null;
@@ -289,6 +301,10 @@ function startMeditation(el, { guide, isFree, resume, preMood }) {
     startBreathing(circle, label, settings.breathPattern);
   }
 
+  // 중간 종 스케줄. 복구 세션은 이미 지난 시점의 종은 건너뛴다.
+  const bellTimes = computeIntervalBells(settings.intervalBell, durationMs);
+  let bellIdx = bellTimes.filter((t) => t <= (resume ? resume.elapsedMs : 0)).length;
+
   // 현재 남은 시간을 저장 → 페이지가 종료돼도 그 지점부터 복구된다.
   let lastPersist = 0;
   const persistProgress = () => {
@@ -312,6 +328,12 @@ function startMeditation(el, { guide, isFree, resume, preMood }) {
       if (min !== lastAnnouncedMin) {
         lastAnnouncedMin = min;
         srEl.textContent = min > 0 ? `${min}분 남음` : '';
+      }
+      // 중간 종: 경과 시간이 예정 지점을 지나면 부드러운 종소리 (종료 종보다 작게)
+      const elapsed = durationMs - rem;
+      while (bellIdx < bellTimes.length && elapsed >= bellTimes[bellIdx]) {
+        playBell(settings.soundVolume * 0.6);
+        bellIdx += 1;
       }
       // 5초마다 진행 상태를 저장(포그라운드에서 강제 종료되는 드문 경우 대비)
       const now = Date.now();

@@ -17,16 +17,46 @@ export function mountJournal(el, params = {}) {
     return;
   }
 
+  // 10단계 테마 이름 (필터 옵션)
+  const phases = [];
+  for (let k = 0; k < 10; k++) phases.push(getGuide(k * 10 + 1).phase);
+
   el.innerHTML = `
     <h1 class="screen-title">일지</h1>
-    <div id="journal-list">
-      ${entries.map((e) => renderItem(e)).join('')}
+    <div class="journal-filters">
+      <input type="search" id="journal-search" class="journal-search" placeholder="소감·제목 검색" autocomplete="off">
+      <select id="journal-phase" class="journal-phase">
+        <option value="all">전체 단계</option>
+        ${phases.map((p) => `<option value="${escapeHtml(p)}">${p}</option>`).join('')}
+      </select>
     </div>
+    <div id="journal-list"></div>
   `;
 
-  el.querySelectorAll('.journal-item').forEach((item) => {
-    item.querySelector('.btn-edit')?.addEventListener('click', () => enterEdit(item));
-  });
+  const listEl = el.querySelector('#journal-list');
+  const searchEl = el.querySelector('#journal-search');
+  const phaseEl = el.querySelector('#journal-phase');
+
+  const renderList = () => {
+    const q = searchEl.value.trim().toLowerCase();
+    const phase = phaseEl.value;
+    const filtered = entries.filter((e) => {
+      const guide = getGuide(e.day);
+      if (phase !== 'all' && guide.phase !== phase) return false;
+      if (q && !`${e.note || ''} ${guide.title}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+    listEl.innerHTML = filtered.length
+      ? filtered.map((e) => renderItem(e)).join('')
+      : '<div class="empty-state" style="padding:40px 20px">조건에 맞는 기록이 없어요.</div>';
+    listEl.querySelectorAll('.journal-item').forEach((item) => {
+      item.querySelector('.btn-edit')?.addEventListener('click', () => enterEdit(item));
+    });
+  };
+
+  searchEl.addEventListener('input', renderList);
+  phaseEl.addEventListener('change', renderList);
+  renderList();
 
   // 달력 그리드에서 특정 날짜로 진입한 경우 해당 항목으로 스크롤
   if (params.date) {

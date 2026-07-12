@@ -10,8 +10,19 @@ const BREATH_LABELS = {
   coherent: '코히런트 (들숨 5.5초 · 날숨 5.5초)',
 };
 
+const MINUTE_PRESETS = [3, 5, 10, 15, 20, 30, 45, 60];
+
+// 배열로 관리 — 객체 정수형 키('5','10')가 앞으로 정렬되는 것을 피한다.
+const INTERVAL_BELL_OPTIONS = [
+  ['none', '없음'],
+  ['half', '절반 지점'],
+  ['5', '5분마다'],
+  ['10', '10분마다'],
+];
+
 export function mountSettings(el) {
   const s = store.getSettings();
+  const isCustomMinutes = !MINUTE_PRESETS.includes(s.sessionMinutes);
 
   el.innerHTML = `
     <h1 class="screen-title">설정</h1>
@@ -21,8 +32,21 @@ export function mountSettings(el) {
       <div class="setting-row">
         <label for="set-minutes">명상 시간</label>
         <select id="set-minutes">
-          ${[5, 10, 15, 20]
+          ${MINUTE_PRESETS
             .map((m) => `<option value="${m}" ${m === s.sessionMinutes ? 'selected' : ''}>${m}분</option>`)
+            .join('')}
+          <option value="custom" ${isCustomMinutes ? 'selected' : ''}>직접 입력</option>
+        </select>
+      </div>
+      <div class="setting-row" id="row-custom-min" ${isCustomMinutes ? '' : 'hidden'}>
+        <label for="set-custom-min">분 직접 입력</label>
+        <input type="number" id="set-custom-min" class="time-input" style="width:84px" min="1" max="120" value="${s.sessionMinutes}">
+      </div>
+      <div class="setting-row">
+        <label for="set-interval-bell">중간 종</label>
+        <select id="set-interval-bell">
+          ${INTERVAL_BELL_OPTIONS
+            .map(([v, l]) => `<option value="${v}" ${v === s.intervalBell ? 'selected' : ''}>${l}</option>`)
             .join('')}
         </select>
       </div>
@@ -56,6 +80,7 @@ export function mountSettings(el) {
     <div class="card">
       <div class="card-label">데이터</div>
       <p class="setting-hint">기록은 이 기기에만 저장돼요. 기기를 바꾸거나 브라우저 데이터를 지우기 전에 백업해 두세요.</p>
+      <p class="setting-hint backup-status" id="backup-status"></p>
       <div class="setting-actions">
         <button id="btn-export" class="btn-small">백업 파일 내보내기</button>
         <button id="btn-import" class="btn-small">백업 가져오기</button>
@@ -65,8 +90,29 @@ export function mountSettings(el) {
     </div>
   `;
 
+  renderBackupStatus(el);
+
+  const customRow = el.querySelector('#row-custom-min');
+  const customInput = el.querySelector('#set-custom-min');
+
   el.querySelector('#set-minutes').addEventListener('change', (e) => {
-    store.updateSettings({ sessionMinutes: parseInt(e.target.value, 10) });
+    if (e.target.value === 'custom') {
+      customRow.hidden = false;
+      store.updateSettings({ sessionMinutes: clampMinutes(customInput.value) });
+    } else {
+      customRow.hidden = true;
+      store.updateSettings({ sessionMinutes: parseInt(e.target.value, 10) });
+    }
+  });
+
+  customInput.addEventListener('change', (e) => {
+    const m = clampMinutes(e.target.value);
+    e.target.value = m;
+    store.updateSettings({ sessionMinutes: m });
+  });
+
+  el.querySelector('#set-interval-bell').addEventListener('change', (e) => {
+    store.updateSettings({ intervalBell: e.target.value });
   });
 
   el.querySelector('#set-breath').addEventListener('change', (e) => {
@@ -118,6 +164,8 @@ export function mountSettings(el) {
     a.download = `meditation100-backup-${store.todayKey()}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    store.markBackup(); // 백업 시점 기록 → 권유 메시지 갱신
+    renderBackupStatus(el);
   });
 
   // 백업 가져오기: 현재 기록을 백업 내용으로 교체
@@ -156,4 +204,26 @@ export function mountSettings(el) {
     store.resetData();
     mountSettings(el);
   });
+}
+
+function clampMinutes(v) {
+  const n = parseInt(v, 10);
+  if (Number.isNaN(n)) return 10;
+  return Math.min(120, Math.max(1, n));
+}
+
+// 백업 권유/상태 문구를 그리고, 오래됐으면 강조 스타일을 준다.
+function renderBackupStatus(el) {
+  const node = el.querySelector('#backup-status');
+  if (!node) return;
+  const st = store.backupStatus();
+  if (!st.everBackedUp) {
+    node.textContent = st.count > 0 ? `아직 백업하지 않았어요 (기록 ${st.count}일).` : '';
+  } else {
+    const days = st.daysSince === 0 ? '오늘' : `${st.daysSince}일 전`;
+    node.textContent = st.unsaved > 0
+      ? `마지막 백업 ${days} · 이후 ${st.unsaved}일 기록이 쌓였어요.`
+      : `마지막 백업 ${days} · 최신 상태예요.`;
+  }
+  node.classList.toggle('warn', st.needed);
 }

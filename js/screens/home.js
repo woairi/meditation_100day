@@ -1,7 +1,9 @@
 import * as store from '../store.js';
 import { getGuide } from '../data/guides.js';
 import { icon } from '../icons.js';
-import { shareCard } from '../share.js';
+import { shareCard, shareProgress } from '../share.js';
+
+const MILESTONES = [10, 30, 50, 100];
 
 export function mountHome(el) {
   if (store.isComplete()) {
@@ -14,6 +16,8 @@ export function mountHome(el) {
   const streak = store.getStreak();
   const todayDone = store.isTodayDone();
   const guide = getGuide(day);
+  const todayComp = todayDone ? store.getCompletion(store.todayKey()) : null;
+  const milestone = todayComp && MILESTONES.includes(todayComp.day) ? todayComp.day : null;
 
   const pct = count / store.TOTAL_DAYS;
   const R = 88;
@@ -38,7 +42,7 @@ export function mountHome(el) {
 
     <div class="today-status">
       ${todayDone
-        ? `<div class="today-done">${icon('check', 18)} 오늘의 명상 완료!</div>
+        ? `<div class="today-done">${icon('check', 18)} ${milestone ? `${milestone}일 달성을 축하해요!` : '오늘의 명상 완료!'}</div>
            <button id="btn-share" class="btn-small" style="margin-top:10px">인증 카드 공유</button>`
         : '<div style="color: var(--fg-dim)">오늘의 명상이 기다리고 있어요</div>'}
     </div>
@@ -46,6 +50,7 @@ export function mountHome(el) {
     <button id="btn-start" class="btn-primary">
       ${todayDone ? '자유 명상 시작' : `Day ${day} 명상 시작`}
     </button>
+    ${count > 0 ? '<button id="btn-share-progress" class="btn-ghost" style="margin-top:8px">여정 공유하기</button>' : ''}
 
     <div class="card guide-preview" style="margin-top:16px">
       <div class="guide-theme">${guide.phase} · DAY ${guide.day}</div>
@@ -59,14 +64,23 @@ export function mountHome(el) {
   });
 
   el.querySelector('#btn-share')?.addEventListener('click', () => {
-    const todayCompletion = store.getCompletion(store.todayKey());
     const [y, m, d] = store.todayKey().split('-');
     shareCard({
-      day: todayCompletion.day,
+      day: todayComp.day,
       dateLabel: `${y}.${m}.${d}`,
       streak,
       count,
       total: store.TOTAL_DAYS,
+    });
+  });
+
+  el.querySelector('#btn-share-progress')?.addEventListener('click', () => {
+    shareProgress({
+      count,
+      total: store.TOTAL_DAYS,
+      streak,
+      totalMinutes: store.totalMinutes(),
+      milestone,
     });
   });
 }
@@ -83,10 +97,20 @@ function renderCelebration(el) {
         이제 명상은 당신의 일부입니다.
       </p>
       <button id="btn-free" class="btn-primary">자유 명상 계속하기</button>
-      <a href="#/calendar" class="btn-ghost">나의 100일 돌아보기</a>
+      <button id="btn-share-done" class="btn-small" style="margin:12px auto 0">완주 카드 공유</button>
+      <a href="#/calendar" class="btn-ghost" style="margin-top:12px">나의 100일 돌아보기</a>
     </div>
   `;
   el.querySelector('#btn-free').addEventListener('click', () => {
     location.hash = '#/session';
+  });
+  el.querySelector('#btn-share-done').addEventListener('click', () => {
+    shareProgress({
+      count: store.TOTAL_DAYS,
+      total: store.TOTAL_DAYS,
+      streak,
+      totalMinutes: store.totalMinutes(),
+      milestone: 100,
+    });
   });
 }

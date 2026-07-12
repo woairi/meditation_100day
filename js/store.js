@@ -19,8 +19,11 @@ function freshState() {
       breathingGuide: true,
       breathPattern: '4-4', // '4-4' | '4-6' | 'box' | '4-7-8' | 'coherent'
       sessionMinutes: 10,
+      intervalBell: 'none', // 'none' | 'half' | '5' | '10' (중간 종)
       reminderEnabled: false,
       reminderTime: '08:00',
+      lastBackupCount: 0, // 마지막 백업 시점의 완료 일수
+      lastBackupAt: null, // 마지막 백업 시각 (ISO)
     },
     completions: {},
   };
@@ -172,10 +175,43 @@ export function totalMinutes() {
   );
 }
 
+// 최근 N주 명상 시간(분) 추이. 각 원소는 7일 창의 합계, 배열은 오래된→최근 순.
+export function weeklyMinutes(weeks = 8) {
+  const buckets = new Array(weeks).fill(0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  for (const [date, c] of Object.entries(state.completions)) {
+    const [y, m, d] = date.split('-').map(Number);
+    const dayDiff = Math.floor((today - new Date(y, m - 1, d)) / 86400000);
+    if (dayDiff < 0) continue;
+    const weeksAgo = Math.floor(dayDiff / 7); // 0 = 최근 7일
+    if (weeksAgo >= weeks) continue;
+    buckets[weeks - 1 - weeksAgo] += Math.round((c.durationSec || 0) / 60);
+  }
+  return buckets;
+}
+
 // ---- 백업/복원 ----
 
 export function exportData() {
   return JSON.stringify(state, null, 2);
+}
+
+// 백업을 방금 마쳤음을 기록 (백업 권유 판단 기준점).
+export function markBackup() {
+  state.settings.lastBackupCount = completedCount();
+  state.settings.lastBackupAt = new Date().toISOString();
+  save();
+}
+
+// 백업 권유 상태: 기록이 충분히 쌓였고 마지막 백업 이후 새 기록이 7일치 이상이면 needed.
+export function backupStatus() {
+  const count = completedCount();
+  const savedCount = state.settings.lastBackupCount || 0;
+  const unsaved = Math.max(0, count - savedCount);
+  const lastAt = state.settings.lastBackupAt;
+  const daysSince = lastAt ? Math.floor((Date.now() - new Date(lastAt).getTime()) / 86400000) : null;
+  return { count, unsaved, everBackedUp: !!lastAt, daysSince, needed: count >= 7 && unsaved >= 7 };
 }
 
 // 백업 JSON으로 전체 상태를 교체한다. 형식이 어긋나면 throw.

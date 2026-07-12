@@ -872,3 +872,78 @@ textarea, select, input[type="range"] { font-family: inherit; }
 
   .modal-overlay { background: rgba(28, 36, 48, 0.45); }
 }
+
+/* ============ 주간 추이 차트 ============ */
+.trend-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 96px;
+}
+
+.trend-col {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.trend-bar {
+  display: block;
+  width: 100%;
+  max-width: 24px;
+  min-height: 0;
+  background: var(--accent-deep);
+  border-radius: 4px 4px 0 0;
+  transition: height 0.4s ease;
+}
+
+.trend-bar.is-max { background: var(--accent); }
+
+.trend-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--fg-dim);
+  margin-top: 8px;
+}
+
+/* ============ 백업 상태 ============ */
+.backup-status { margin-top: -6px; margin-bottom: 12px; }
+.backup-status:empty { display: none; }
+.setting-hint.warn { color: var(--warn); font-weight: 600; }
+
+/* ============ 일지 검색·필터 ============ */
+.journal-filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.journal-search {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-card);
+  color: var(--fg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+}
+
+.journal-search:focus { outline: 2px solid var(--accent); }
+
+.journal-phase {
+  background: var(--bg-card-hover);
+  color: var(--fg);
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  max-width: 42%;
+}
+
+@media (prefers-color-scheme: light) {
+  .journal-search { border-color: rgba(0, 0, 0, 0.12); }
+}

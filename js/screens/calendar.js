@@ -44,6 +44,7 @@ function render(el) {
       <div class="card-label">최근 7일 · 총 명상 ${formatMinutes(store.totalMinutes())}</div>
       <div class="week-strip">${renderWeekStrip(completions)}</div>
     </div>
+    ${renderWeeklyTrend()}
     ${renderTimeOfDay(completions)}
     <div class="card">
       <div class="guide-theme" style="font-size:12px;color:var(--accent);font-weight:700;margin-bottom:10px">100일 챌린지 · 10단계 여정</div>
@@ -79,6 +80,28 @@ function render(el) {
 
 function formatMinutes(min) {
   return min >= 60 ? `${Math.floor(min / 60)}시간 ${min % 60}분` : `${min}분`;
+}
+
+// 주간 명상 시간 추이 (최근 8주). 단일 계열 · 강조색 막대. 기록이 없으면 표시 안 함.
+function renderWeeklyTrend() {
+  const weeks = store.weeklyMinutes(8);
+  const total = weeks.reduce((a, b) => a + b, 0);
+  if (total === 0) return '';
+  const max = Math.max(...weeks);
+  const bars = weeks.map((min, i) => {
+    const weeksAgo = weeks.length - 1 - i;
+    const wLabel = weeksAgo === 0 ? '이번 주' : `${weeksAgo}주 전`;
+    const h = min > 0 ? Math.max(Math.round((min / max) * 100), 5) : 0;
+    return `<div class="trend-col" title="${wLabel} · ${formatMinutes(min)}">
+      <span class="trend-bar${min === max ? ' is-max' : ''}" style="height:${h}%"></span>
+    </div>`;
+  }).join('');
+  return `
+    <div class="card">
+      <div class="card-label">주간 명상 시간 추이 · 최근 8주</div>
+      <div class="trend-chart">${bars}</div>
+      <div class="trend-axis"><span>8주 전</span><span>이번 주</span></div>
+    </div>`;
 }
 
 // 10단계 테마 색 범례 — 100칸 그리드의 색 밴드 의미를 설명한다.
