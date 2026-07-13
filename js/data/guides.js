@@ -155,3 +155,71 @@ export const GUIDES = [
 export function getGuide(day) {
   return GUIDES[Math.min(Math.max(day, 1), GUIDES.length) - 1];
 }
+
+// ---- 단계별 배경음 추천 (테마 이름 → 사운드 키) ----
+const SOUND_BY_PHASE = {
+  '호흡 기초': 'rain',
+  '바디스캔': 'bowl',
+  '소리 알아차림': 'forest',
+  '생각 바라보기': 'stream',
+  '감정 알아차림': 'waves',
+  '자애 명상': 'bowl',
+  '감사': 'forest',
+  '수용과 내려놓기': 'waves',
+  '일상 속 마음챙김': 'stream',
+  '통합과 회고': 'rain',
+};
+
+export function suggestedSound(day) {
+  return SOUND_BY_PHASE[getGuide(day).phase] || 'rain';
+}
+
+// ---- 자유/지속 명상: 100일 이후·하루 두 번째 세션에서 날마다 순환하는 안내 ----
+export const CONTINUE_GUIDES = [
+  { title: '지금 이 호흡', text: '특별한 목표 없이, 지금 들고 나는 호흡 하나에 마음을 얹어 머물러 봅니다.' },
+  { title: '몸으로 돌아오기', text: '발끝부터 정수리까지, 지금 몸에 있는 감각을 천천히 훑어 내려가 봅니다.' },
+  { title: '소리와 함께', text: '들려오는 소리를 판단 없이 그저 들으며, 소리와 고요 사이에 머뭅니다.' },
+  { title: '생각을 흘려보내기', text: '떠오르는 생각을 구름처럼 바라보고, 붙잡지 않고 지나가게 둡니다.' },
+  { title: '지금의 감정', text: '지금 마음에 어떤 결이 있는지 살펴보고, 있는 그대로 자리를 내어줍니다.' },
+  { title: '나에게 보내는 자애', text: '"내가 편안하기를" 한 문장을 날숨마다 마음에 되새깁니다.' },
+  { title: '세 가지 감사', text: '오늘 고마운 것 세 가지를 천천히 떠올리며 그 온기에 머뭅니다.' },
+  { title: '내려놓기', text: '쥐고 있던 생각 하나를 날숨과 함께 손에서 풀어놓는 상상을 합니다.' },
+  { title: '지금 이 순간', text: '과거도 미래도 아닌, 지금 여기에 온전히 머무는 연습을 합니다.' },
+  { title: '넓은 알아차림', text: '호흡·몸·소리 어디에도 고정하지 않고, 지금 가장 또렷한 것을 알아차립니다.' },
+  { title: '고요에 기대어', text: '아무것도 하지 않아도 되는 이 시간, 고요 자체에 몸을 맡깁니다.' },
+  { title: '다시, 시작', text: '처음 명상하던 마음으로 돌아가, 한 호흡 한 호흡을 새롭게 맞이합니다.' },
+];
+
+// ---- 오늘의 한 줄 (홈 화면 경구) ----
+export const QUOTES = [
+  '한 번의 호흡에 온 마음을 담아보세요.',
+  '지금 이 순간이 유일하게 살아 있는 시간입니다.',
+  '생각은 구름이고, 당신은 하늘입니다.',
+  '멈추는 것도 나아가는 것입니다.',
+  '완벽한 명상은 없습니다. 그저 앉는 것으로 충분합니다.',
+  '숨을 내쉬며, 오늘의 무게를 조금 내려놓으세요.',
+  '알아차린 그 순간, 이미 돌아온 것입니다.',
+  '고요는 멀리 있지 않습니다. 한 호흡 안에 있습니다.',
+  '서두르지 않아도 도착합니다.',
+  '지금 여기, 그것으로 충분합니다.',
+  '마음이 떠나면, 부드럽게 데려오세요. 그게 전부입니다.',
+  '오늘의 나에게 조금 더 다정해도 괜찮습니다.',
+  '파도를 멈출 순 없지만, 파도 타는 법은 배울 수 있습니다.',
+  '매일의 10분이 당신을 바꿉니다.',
+];
+
+// 날짜 기반 회전 인덱스 — 같은 날에는 같은 콘텐츠, 날이 바뀌면 다음 것.
+function dayOfYear(date) {
+  const start = new Date(date.getFullYear(), 0, 0);
+  return Math.floor((date - start) / 86400000);
+}
+
+// 자유/지속 명상 안내. day는 진행도(현재 단계 유지용), 내용은 날마다 순환.
+export function getFreeGuide(day, date = new Date()) {
+  const g = CONTINUE_GUIDES[dayOfYear(date) % CONTINUE_GUIDES.length];
+  return { phase: '지속 명상', day, title: g.title, text: g.text };
+}
+
+export function getQuote(date = new Date()) {
+  return QUOTES[dayOfYear(date) % QUOTES.length];
+}

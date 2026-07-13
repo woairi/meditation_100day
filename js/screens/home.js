@@ -1,5 +1,5 @@
 import * as store from '../store.js';
-import { getGuide } from '../data/guides.js';
+import { getGuide, getQuote } from '../data/guides.js';
 import { icon } from '../icons.js';
 import { shareCard, shareProgress } from '../share.js';
 
@@ -57,6 +57,8 @@ export function mountHome(el) {
       <div class="guide-title">${guide.title}</div>
       <div class="guide-text">${guide.text}</div>
     </div>
+
+    <p class="daily-quote">"${getQuote()}"</p>
   `;
 
   el.querySelector('#btn-start').addEventListener('click', () => {

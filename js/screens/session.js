@@ -1,5 +1,5 @@
 import * as store from '../store.js';
-import { getGuide } from '../data/guides.js';
+import { getGuide, getFreeGuide, suggestedSound } from '../data/guides.js';
 import { createTimer, formatTime } from '../timer.js';
 import { playBell, playEndBells, startAmbient, stopAmbient, setAmbientVolume, resumeAudio } from '../audio.js';
 import { requestWakeLock, releaseWakeLock } from '../wakelock.js';
@@ -7,6 +7,7 @@ import { icon } from '../icons.js';
 import { showConfirm } from '../ui.js';
 import { moodPickerHTML, wireMoodPicker } from '../mood.js';
 import * as notify from '../notify.js';
+import { speak, stopSpeech, speechSupported } from '../speech.js';
 
 // ?dev 쿼리로 10초 세션 허용 (검증용)
 const DEV_MODE = new URLSearchParams(location.search).has('dev');
@@ -92,10 +93,11 @@ export function mountSession(el) {
 
   const isFree = store.isTodayDone(); // 오늘 이미 완료 → 자유 명상 (도장 없음)
   const day = store.getCurrentDay();
-  const guide = getGuide(day);
+  // 자유/지속 명상은 날마다 순환하는 안내를 보여준다 (day 100 반복 대신)
+  const guide = isFree ? getFreeGuide(day) : getGuide(day);
   const recovered = store.getActiveSession();
 
-  renderPreroll(el, { guide, isFree, recovered });
+  renderPreroll(el, { guide, day, isFree, recovered });
 }
 
 export function unmountSession() {
@@ -119,24 +121,28 @@ function cleanup() {
   clearTimeout(previewTimeout);
   previewTimeout = null;
   stopAmbient();
+  stopSpeech();
   releaseWakeLock();
 }
 
 // ---- 1단계: 시작 전 (가이드 + 사운드 설정 + 시작 버튼 = 오디오 잠금 해제 제스처) ----
 
-function renderPreroll(el, { guide, isFree, recovered }) {
+function renderPreroll(el, { guide, day, isFree, recovered }) {
   const canResume = recovered
     && typeof recovered.remainingMs === 'number'
     && recovered.remainingMs > 0
     && Date.now() - (recovered.savedAt || 0) < RESUME_WINDOW_MS;
   const settings = store.getSettings();
   const resumeLabel = canResume ? formatTime(recovered.remainingMs) : '';
+  const suggested = suggestedSound(day); // 이 단계에 어울리는 배경음
+  const showSuggestion = suggested !== settings.soundType;
 
   el.innerHTML = `
     <div class="session-wrap">
-      <div class="session-guide-theme">${guide.phase} · DAY ${guide.day}</div>
-      <div class="session-guide-title">${isFree ? '자유 명상' : guide.title}</div>
-      <p class="session-guide-text">${isFree ? '오늘의 도장은 이미 받았어요. 편안하게 한 번 더 머물러 보세요.' : guide.text}</p>
+      <div class="session-guide-theme">${isFree ? '자유 명상 · 지속' : `${guide.phase} · DAY ${guide.day}`}</div>
+      <div class="session-guide-title">${guide.title}</div>
+      <p class="session-guide-text">${guide.text}</p>
+      ${speechSupported() ? '<button id="btn-narrate" class="btn-small">가이드 낭독 듣기</button>' : ''}
       <div class="card" style="max-width:320px;width:100%;margin-bottom:0">
         <div class="sound-row">
           <label for="sound-type">배경 사운드</label>
@@ -150,7 +156,14 @@ function renderPreroll(el, { guide, isFree, recovered }) {
           <label for="sound-volume">볼륨</label>
           <input id="sound-volume" type="range" min="0" max="1" step="0.05" value="${settings.soundVolume}">
         </div>
+        <div class="sound-suggest" id="sound-suggest" ${showSuggestion ? '' : 'hidden'}>
+          이 단계엔 '${SOUND_LABELS[suggested]}' 추천 · <button id="btn-apply-sound" data-sound="${suggested}">적용</button>
+        </div>
       </div>
+      <details class="posture-tip">
+        <summary>준비 자세 안내</summary>
+        <p>허리를 부드럽게 세우고 어깨의 힘을 뺍니다. 손은 무릎이나 허벅지에 편히 두고, 눈은 살며시 감거나 시선을 아래로 내립니다. 특별히 애쓰지 않아도 괜찮아요.</p>
+      </details>
       ${isFree ? '' : `
         <div class="card" style="max-width:320px;width:100%;margin-bottom:0">
           ${moodPickerHTML('pre-mood', '지금 마음 상태는 어떤가요? (선택)')}
@@ -166,10 +179,37 @@ function renderPreroll(el, { guide, isFree, recovered }) {
   `;
 
   const getPreMood = wireMoodPicker(el, 'pre-mood');
+  const soundSelect = el.querySelector('#sound-type');
+  const soundSuggest = el.querySelector('#sound-suggest');
+
+  // 가이드 낭독: 탭하면 재생/정지 토글 (버튼 탭 = 사용자 제스처)
+  el.querySelector('#btn-narrate')?.addEventListener('click', (e) => {
+    const btn = e.currentTarget;
+    if (btn.dataset.playing) {
+      stopSpeech();
+      btn.dataset.playing = '';
+      btn.textContent = '가이드 낭독 듣기';
+    } else {
+      speak(`${guide.title}. ${guide.text}`, {
+        onend: () => { btn.dataset.playing = ''; btn.textContent = '가이드 낭독 듣기'; },
+      });
+      btn.dataset.playing = '1';
+      btn.textContent = '낭독 멈추기';
+    }
+  });
+
+  // 추천 배경음 적용
+  el.querySelector('#btn-apply-sound')?.addEventListener('click', (e) => {
+    const val = e.currentTarget.dataset.sound;
+    soundSelect.value = val;
+    soundSelect.dispatchEvent(new Event('change')); // 저장 + 미리듣기 재사용
+    if (soundSuggest) soundSuggest.hidden = true;
+  });
 
   // 사운드 변경 시 3초 미리듣기 (select 변경도 사용자 제스처라 AudioContext 생성 가능)
-  el.querySelector('#sound-type').addEventListener('change', (e) => {
+  soundSelect.addEventListener('change', (e) => {
     store.updateSettings({ soundType: e.target.value });
+    if (soundSuggest) soundSuggest.hidden = true; // 사용자가 선택했으니 추천 숨김
     clearTimeout(previewTimeout);
     startAmbient(e.target.value, store.getSettings().soundVolume);
     previewTimeout = setTimeout(() => stopAmbient(), 3000);
@@ -347,6 +387,11 @@ function startMeditation(el, { guide, isFree, resume, preMood }) {
 
   timer.start(resume ? { elapsedMs: resume.elapsedMs } : {});
   persistProgress();
+
+  // 시작 시 가이드 낭독 (설정 시, 새 세션에서만)
+  if (settings.guideNarration && !resume) {
+    speak(`${guide.title}. ${guide.text}`);
+  }
 
   const doPause = () => {
     if (!timer || timer.isPaused) return;

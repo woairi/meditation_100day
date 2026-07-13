@@ -51,6 +51,10 @@ export function mountSettings(el) {
         </select>
       </div>
       <div class="setting-row">
+        <label for="set-narration">시작 시 가이드 낭독</label>
+        <input type="checkbox" id="set-narration" class="switch" ${s.guideNarration ? 'checked' : ''}>
+      </div>
+      <div class="setting-row">
         <label for="set-breath">호흡 가이드</label>
         <input type="checkbox" id="set-breath" class="switch" ${s.breathingGuide ? 'checked' : ''}>
       </div>
@@ -113,6 +117,10 @@ export function mountSettings(el) {
 
   el.querySelector('#set-interval-bell').addEventListener('change', (e) => {
     store.updateSettings({ intervalBell: e.target.value });
+  });
+
+  el.querySelector('#set-narration').addEventListener('change', (e) => {
+    store.updateSettings({ guideNarration: e.target.checked });
   });
 
   el.querySelector('#set-breath').addEventListener('change', (e) => {

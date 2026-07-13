@@ -1,6 +1,6 @@
 // cache-first 프리캐시 서비스 워커.
 // 파일을 변경해 배포할 때마다 CACHE_NAME 버전을 올려야 클라이언트가 갱신된다.
-const CACHE_NAME = 'meditation100-v11';
+const CACHE_NAME = 'meditation100-v12';
 const META_CACHE = 'meditation100-meta'; // 리마인더 메타 공유(앱 ↔ SW). activate 정리에서 제외한다.
 const META_KEY = '/__reminder_meta';
 
@@ -20,6 +20,7 @@ const ASSETS = [
   './js/mood.js',
   './js/notify.js',
   './js/onboarding.js',
+  './js/speech.js',
   './js/screens/settings.js',
   './js/screens/home.js',
   './js/screens/session.js',

@@ -947,3 +947,54 @@ textarea, select, input[type="range"] { font-family: inherit; }
 @media (prefers-color-scheme: light) {
   .journal-search { border-color: rgba(0, 0, 0, 0.12); }
 }
+
+/* ============ 명상 콘텐츠 (추천·낭독·자세·경구) ============ */
+.sound-suggest {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--fg-dim);
+}
+
+.sound-suggest button {
+  background: transparent;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 2px 4px;
+}
+
+#btn-narrate { margin-top: -4px; }
+
+.posture-tip {
+  max-width: 320px;
+  width: 100%;
+  font-size: 14px;
+  color: var(--fg-dim);
+}
+
+.posture-tip summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+  padding: 6px 0;
+  list-style: none;
+}
+
+.posture-tip summary::-webkit-details-marker { display: none; }
+.posture-tip summary::before { content: '＋ '; }
+.posture-tip[open] summary::before { content: '－ '; }
+
+.posture-tip p {
+  line-height: 1.7;
+  padding: 4px 2px 8px;
+  text-align: left;
+}
+
+.daily-quote {
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--fg-dim);
+  font-style: italic;
+  margin: 20px 12px 4px;
+}

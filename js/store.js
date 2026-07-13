@@ -20,6 +20,7 @@ function freshState() {
       breathPattern: '4-4', // '4-4' | '4-6' | 'box' | '4-7-8' | 'coherent'
       sessionMinutes: 10,
       intervalBell: 'none', // 'none' | 'half' | '5' | '10' (중간 종)
+      guideNarration: false, // 시작 시 가이드 문구 음성 낭독
       reminderEnabled: false,
       reminderTime: '08:00',
       lastBackupCount: 0, // 마지막 백업 시점의 완료 일수
