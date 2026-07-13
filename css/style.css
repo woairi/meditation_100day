@@ -998,3 +998,10 @@ textarea, select, input[type="range"] { font-family: inherit; }
   font-style: italic;
   margin: 20px 12px 4px;
 }
+
+/* ============ 오늘 세션 요약 ============ */
+.today-sessions {
+  font-size: 13px;
+  color: var(--fg-dim);
+  margin-top: 6px;
+}

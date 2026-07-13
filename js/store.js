@@ -219,6 +219,21 @@ export function totalMinutes() {
   );
 }
 
+// 오늘 완료한 세션들
+export function todaySessions() {
+  const key = todayKey();
+  return state.sessions.filter((s) => s.date === key);
+}
+
+export function todaySessionCount() {
+  return todaySessions().length;
+}
+
+// 오늘 누적 명상 시간(분)
+export function todayMinutes() {
+  return Math.round(todaySessions().reduce((sum, s) => sum + (s.durationSec || 0), 0) / 60);
+}
+
 // 최근 N주 명상 시간(분) 추이. 각 원소는 7일 창의 합계, 배열은 오래된→최근 순. 모든 세션 기준.
 export function weeklyMinutes(weeks = 8) {
   const buckets = new Array(weeks).fill(0);

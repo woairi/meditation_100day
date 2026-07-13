@@ -43,6 +43,7 @@ export function mountHome(el) {
     <div class="today-status">
       ${todayDone
         ? `<div class="today-done">${icon('check', 18)} ${milestone ? `${milestone}일 달성을 축하해요!` : '오늘의 명상 완료!'}</div>
+           <div class="today-sessions">오늘 ${store.todaySessionCount()}회 · ${store.todayMinutes()}분 명상했어요</div>
            <button id="btn-share" class="btn-small" style="margin-top:10px">인증 카드 공유</button>`
         : '<div style="color: var(--fg-dim)">오늘의 명상이 기다리고 있어요</div>'}
     </div>

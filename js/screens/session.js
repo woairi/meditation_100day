@@ -465,10 +465,13 @@ function completeSession(el, { guide, isFree, durationMs, startedAtISO, preMood 
   const heading = isFree
     ? `<div class="stamp-pop">${icon('circles', 88)}</div><div class="session-guide-title">자유 명상 완료</div>`
     : `<div class="stamp-pop">${icon('checkCircle', 88)}</div><div class="session-guide-title">Day ${guide.day} 완료!</div>`;
+  const ordinal = store.todaySessionCount() + 1; // 아직 기록 전 → 이번 세션 포함
+  const ordinalNote = ordinal >= 2 ? `<div class="today-sessions">오늘 ${ordinal}번째 명상이에요</div>` : '';
 
   el.innerHTML = `
     <div class="session-wrap">
       ${heading}
+      ${ordinalNote}
       <div class="reflection-box">
         <p class="session-guide-text" style="margin-bottom:10px">${isFree ? '한 번 더 고요한 시간을 보냈어요.' : '오늘의 명상은 어땠나요?'}</p>
         ${moodPickerHTML('post-mood', '명상 후 마음 상태 (선택)')}
