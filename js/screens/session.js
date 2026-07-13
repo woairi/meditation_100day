@@ -456,28 +456,21 @@ function completeSession(el, { guide, isFree, durationMs, startedAtISO, preMood 
   clearTimeout(breathTimeout);
   clearTimeout(hudTimeout);
   stopAmbient();
+  stopSpeech();
   releaseWakeLock();
   playEndBells(store.getSettings().soundVolume);
   if (navigator.vibrate) navigator.vibrate([120, 80, 120]); // 화면을 안 봐도 끝을 알 수 있게
 
-  if (isFree) {
-    el.innerHTML = `
-      <div class="session-wrap">
-        <div class="stamp-pop">${icon('circles', 88)}</div>
-        <div class="session-guide-title">자유 명상 완료</div>
-        <p class="session-guide-text">오늘 두 번째 고요한 시간이었어요.</p>
-        <a href="#/" class="btn-primary" style="max-width:320px;text-align:center;text-decoration:none">홈으로</a>
-      </div>
-    `;
-    return;
-  }
+  // 도장 세션과 자유 세션 모두 소감을 남길 수 있게 통일 (자유 세션도 기록됨)
+  const heading = isFree
+    ? `<div class="stamp-pop">${icon('circles', 88)}</div><div class="session-guide-title">자유 명상 완료</div>`
+    : `<div class="stamp-pop">${icon('checkCircle', 88)}</div><div class="session-guide-title">Day ${guide.day} 완료!</div>`;
 
   el.innerHTML = `
     <div class="session-wrap">
-      <div class="stamp-pop">${icon('checkCircle', 88)}</div>
-      <div class="session-guide-title">Day ${guide.day} 완료!</div>
+      ${heading}
       <div class="reflection-box">
-        <p class="session-guide-text" style="margin-bottom:10px">오늘의 명상은 어땠나요?</p>
+        <p class="session-guide-text" style="margin-bottom:10px">${isFree ? '한 번 더 고요한 시간을 보냈어요.' : '오늘의 명상은 어땠나요?'}</p>
         ${moodPickerHTML('post-mood', '명상 후 마음 상태 (선택)')}
         <textarea id="note" placeholder="짧게 소감을 남겨보세요 (선택)" style="margin-top:12px"></textarea>
         <button id="btn-save" class="btn-primary">저장</button>
@@ -489,12 +482,13 @@ function completeSession(el, { guide, isFree, durationMs, startedAtISO, preMood 
   const getPostMood = wireMoodPicker(el, 'post-mood');
 
   const finish = (note) => {
-    store.recordCompletion({
+    store.recordSession({
       durationSec: Math.round(durationMs / 1000),
       note,
       startedAt: startedAtISO,
       moodBefore: preMood ?? null,
       moodAfter: getPostMood(),
+      isFree,
     });
     notify.syncReminderMeta(); // 오늘 완료 → 리마인더가 다시 울리지 않도록 메타 갱신
     location.hash = '#/';

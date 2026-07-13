@@ -3,7 +3,7 @@
 
 const KEY = 'meditation100.v1';
 const SESSION_KEY = 'meditation100.activeSession';
-const CURRENT_SCHEMA = 1;
+const CURRENT_SCHEMA = 2; // v2: 모든 세션 로그(sessions[]) 추가
 export const TOTAL_DAYS = 100;
 
 // 마음 상태 5단계(값 1~5). 이모지 대신 텍스트 라벨 — 다크 테마 톤 유지.
@@ -26,11 +26,31 @@ function freshState() {
       lastBackupCount: 0, // 마지막 백업 시점의 완료 일수
       lastBackupAt: null, // 마지막 백업 시각 (ISO)
     },
-    completions: {},
+    completions: {}, // 날짜별 도장 (하루 1개) — 스트릭/Day N/그리드의 기준
+    sessions: [], // 완료한 모든 세션 로그 (자유 명상 포함) — 총 시간/통계/일지의 기준
   };
 }
 
+// 도장(completion) 하나를 세션 로그 항목으로 변환 (v1→v2 백필용)
+function sessionFromCompletion(date, c) {
+  return {
+    id: c.completedAt || `${date}T12:00:00.000Z`,
+    date,
+    day: c.day,
+    isFree: false,
+    startedAt: c.startedAt || null,
+    completedAt: c.completedAt || null,
+    durationSec: c.durationSec || 0,
+    note: c.note || '',
+    moodBefore: c.moodBefore ?? null,
+    moodAfter: c.moodAfter ?? null,
+  };
+}
+
+let migrationOccurred = false;
 let state = load();
+// 마이그레이션이 있었으면 즉시 저장해 백필 결과가 유실되지 않게 한다.
+if (migrationOccurred) save();
 
 function load() {
   try {
@@ -47,9 +67,16 @@ function migrate(data) {
   // schemaVersion이 올라가면 여기서 순차 마이그레이션을 수행한다.
   if (!data.schemaVersion || data.schemaVersion < CURRENT_SCHEMA) {
     data = { ...freshState(), ...data, schemaVersion: CURRENT_SCHEMA };
+    migrationOccurred = true;
   }
   // 같은 스키마 안에서 설정 항목이 추가된 경우 기본값을 채운다.
   data.settings = { ...freshState().settings, ...data.settings };
+  // v2: 세션 로그가 없으면 기존 도장에서 백필한다.
+  if (!Array.isArray(data.sessions)) { data.sessions = []; migrationOccurred = true; }
+  if (data.sessions.length === 0 && data.completions && Object.keys(data.completions).length) {
+    data.sessions = Object.entries(data.completions).map(([date, c]) => sessionFromCompletion(date, c));
+    migrationOccurred = true;
+  }
   return data;
 }
 
@@ -110,28 +137,46 @@ export function getCompletion(dateKey) {
   return state.completions[dateKey] || null;
 }
 
-// 완료 기록. 같은 날 두 번째 완료는 도장을 추가하지 않는다(자유 명상).
-export function recordCompletion({ durationSec, note = '', startedAt = null, moodBefore = null, moodAfter = null }) {
-  const key = todayKey();
-  if (key in state.completions) return false;
-  state.completions[key] = {
-    day: getCurrentDay(),
-    startedAt, // 세션 시작 시각 (ISO), 이전 버전 기록에는 없을 수 있음
-    completedAt: new Date().toISOString(),
-    durationSec,
-    note,
-    moodBefore, // 명상 전 마음 상태 (1~5), 미입력 시 null
-    moodAfter, // 명상 후 마음 상태 (1~5), 미입력 시 null
-  };
-  if (!state.startedAt) state.startedAt = key;
+// 세션 완료 기록. 그날의 첫 세션이고 자유 명상이 아니면 도장을 찍고,
+// 모든 세션은 로그(sessions)에 남긴다 → 하루 두 번째 명상도 시간/통계/일지에 반영.
+export function recordSession({ durationSec, note = '', startedAt = null, moodBefore = null, moodAfter = null, isFree = false }) {
+  const date = todayKey();
+  const now = new Date().toISOString();
+  const alreadyStamped = date in state.completions;
+  const stamp = !isFree && !alreadyStamped;
+  if (stamp) {
+    state.completions[date] = {
+      day: getCurrentDay(),
+      startedAt,
+      completedAt: now,
+      durationSec,
+      note,
+      moodBefore,
+      moodAfter,
+    };
+    if (!state.startedAt) state.startedAt = date;
+  }
+  const day = state.completions[date]?.day ?? getCurrentDay();
+  state.sessions.push({ id: now, date, day, isFree: !stamp, startedAt, completedAt: now, durationSec, note, moodBefore, moodAfter });
   save();
-  return true;
+  return { stamped: stamp, day };
 }
 
-export function updateNote(dateKey, note) {
-  const c = state.completions[dateKey];
-  if (!c) return;
-  c.note = note;
+export function getSessions() {
+  return state.sessions;
+}
+
+export function getSession(id) {
+  return state.sessions.find((s) => s.id === id) || null;
+}
+
+// 세션 소감 수정. 그 세션이 도장(첫 세션)이면 도장의 소감도 함께 맞춘다.
+export function updateSessionNote(id, note) {
+  const s = state.sessions.find((x) => x.id === id);
+  if (!s) return;
+  s.note = note;
+  const c = state.completions[s.date];
+  if (c && !s.isFree && c.completedAt === s.id) c.note = note;
   save();
 }
 
@@ -162,32 +207,30 @@ export function getLongestStreak() {
   return longest;
 }
 
-// 최신순 일지 목록
+// 최신순 일지 목록 (모든 세션 — 자유 명상 포함)
 export function getJournalEntries() {
-  return Object.entries(state.completions)
-    .map(([date, c]) => ({ date, ...c }))
-    .sort((a, b) => (a.date < b.date ? 1 : -1));
+  return [...state.sessions].sort((a, b) => (a.completedAt < b.completedAt ? 1 : -1));
 }
 
-// 총 명상 시간(분)
+// 총 명상 시간(분) — 모든 세션 합산
 export function totalMinutes() {
   return Math.round(
-    Object.values(state.completions).reduce((sum, c) => sum + (c.durationSec || 0), 0) / 60
+    state.sessions.reduce((sum, s) => sum + (s.durationSec || 0), 0) / 60
   );
 }
 
-// 최근 N주 명상 시간(분) 추이. 각 원소는 7일 창의 합계, 배열은 오래된→최근 순.
+// 최근 N주 명상 시간(분) 추이. 각 원소는 7일 창의 합계, 배열은 오래된→최근 순. 모든 세션 기준.
 export function weeklyMinutes(weeks = 8) {
   const buckets = new Array(weeks).fill(0);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  for (const [date, c] of Object.entries(state.completions)) {
-    const [y, m, d] = date.split('-').map(Number);
+  for (const s of state.sessions) {
+    const [y, m, d] = s.date.split('-').map(Number);
     const dayDiff = Math.floor((today - new Date(y, m - 1, d)) / 86400000);
     if (dayDiff < 0) continue;
     const weeksAgo = Math.floor(dayDiff / 7); // 0 = 최근 7일
     if (weeksAgo >= weeks) continue;
-    buckets[weeks - 1 - weeksAgo] += Math.round((c.durationSec || 0) / 60);
+    buckets[weeks - 1 - weeksAgo] += Math.round((s.durationSec || 0) / 60);
   }
   return buckets;
 }

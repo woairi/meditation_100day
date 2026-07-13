@@ -41,9 +41,12 @@ export function mountJournal(el, params = {}) {
     const q = searchEl.value.trim().toLowerCase();
     const phase = phaseEl.value;
     const filtered = entries.filter((e) => {
-      const guide = getGuide(e.day);
-      if (phase !== 'all' && guide.phase !== phase) return false;
-      if (q && !`${e.note || ''} ${guide.title}`.toLowerCase().includes(q)) return false;
+      // 자유 명상은 특정 단계에 속하지 않으므로 '전체'에서만 보인다
+      if (phase !== 'all' && (e.isFree || getGuide(e.day).phase !== phase)) return false;
+      if (q) {
+        const hay = `${e.note || ''} ${e.isFree ? '자유 명상' : getGuide(e.day).title}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       return true;
     });
     listEl.innerHTML = filtered.length
@@ -70,16 +73,17 @@ export function mountJournal(el, params = {}) {
 }
 
 function renderItem(e) {
-  const guide = getGuide(e.day);
   const [y, m, d] = e.date.split('-');
-  const startTime = e.startedAt ? formatTime(e.startedAt) : '';
+  const time = formatTime(e.startedAt || e.completedAt);
+  const label = e.isFree ? '자유 명상' : `Day ${e.day}`;
+  const theme = e.isFree ? '자유 명상' : `${getGuide(e.day).phase} · ${getGuide(e.day).title}`;
   return `
-    <div class="journal-item" data-date="${e.date}">
+    <div class="journal-item" data-id="${escapeHtml(String(e.id))}" data-date="${e.date}">
       <div class="j-head">
-        <span class="j-day">Day ${e.day}</span>
-        <span class="j-date">${y}.${m}.${d}${startTime ? ` · ${startTime} 시작` : ''}</span>
+        <span class="j-day">${label}</span>
+        <span class="j-date">${y}.${m}.${d}${time ? ` · ${time}` : ''}</span>
       </div>
-      <div class="j-theme">${guide.phase} · ${guide.title}</div>
+      <div class="j-theme">${theme}</div>
       ${moodLine(e.moodBefore, e.moodAfter)}
       <div class="j-note ${e.note ? '' : 'empty'}">${e.note ? escapeHtml(e.note) : '소감이 없어요'}</div>
       <button class="btn-small btn-edit" style="margin-top:10px">${e.note ? '수정' : '소감 쓰기'}</button>
@@ -88,8 +92,8 @@ function renderItem(e) {
 }
 
 function enterEdit(item) {
-  const date = item.dataset.date;
-  const current = store.getCompletion(date)?.note || '';
+  const id = item.dataset.id;
+  const current = store.getSession(id)?.note || '';
   const noteEl = item.querySelector('.j-note');
   const editBtn = item.querySelector('.btn-edit');
   noteEl.hidden = true;
@@ -106,7 +110,7 @@ function enterEdit(item) {
 
   box.querySelector('[data-act="save"]').addEventListener('click', () => {
     const note = box.querySelector('textarea').value.trim();
-    store.updateNote(date, note);
+    store.updateSessionNote(id, note);
     noteEl.textContent = note || '소감이 없어요';
     noteEl.classList.toggle('empty', !note);
     editBtn.textContent = note ? '수정' : '소감 쓰기';

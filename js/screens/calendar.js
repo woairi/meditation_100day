@@ -45,7 +45,7 @@ function render(el) {
       <div class="week-strip">${renderWeekStrip(completions)}</div>
     </div>
     ${renderWeeklyTrend()}
-    ${renderTimeOfDay(completions)}
+    ${renderTimeOfDay(store.getSessions())}
     <div class="card">
       <div class="guide-theme" style="font-size:12px;color:var(--accent);font-weight:700;margin-bottom:10px">100일 챌린지 · 10단계 여정</div>
       ${renderPhaseLegend()}
@@ -141,9 +141,9 @@ const TIME_SLOTS = [
   { label: '밤', range: '21-24', from: 21, to: 24 },
 ];
 
-function renderTimeOfDay(completions) {
+function renderTimeOfDay(sessions) {
   const counts = TIME_SLOTS.map(() => 0);
-  for (const c of Object.values(completions)) {
+  for (const c of sessions) {
     const d = new Date(c.startedAt || c.completedAt);
     if (Number.isNaN(d.getTime())) continue;
     const h = d.getHours();
