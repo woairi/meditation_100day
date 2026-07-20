@@ -1,31 +1,117 @@
-/* ============ 기본 ============ */
+/* ============ 기본 (테마: 기존 UI/classic) ============ */
 :root {
   --bg: #0f1420;
+  --bg2: #0f1420;
   --bg-card: #1a2233;
   --bg-card-hover: #222c42;
+  --card-border: transparent;
   --fg: #e8ecf4;
   --fg-dim: #8a94a8;
   --accent: #7fb8a4;
   --accent-deep: #5a9683;
-  --accent-glow: rgba(127, 184, 164, 0.35);
+  --accent-soft: rgba(127, 184, 164, 0.18);
+  --on-accent: #0c1118;
   --warn: #d9a06b;
   --danger: #c97b7b;
   --radius: 16px;
+  --day-weight: 800;
+  --tabbar-bg: rgba(15, 20, 32, 0.92);
+  --tabbar-border: rgba(255, 255, 255, 0.06);
+  --sep: rgba(255, 255, 255, 0.08);
+  --orb-grad: radial-gradient(circle at 38% 34%, #a8ddca, var(--accent) 46%, var(--accent-deep) 78%);
+  --orb-glow: rgba(127, 184, 164, 0.4);
+  --fog-1: transparent;
+  --fog-2: transparent;
+  --fog-3: transparent;
+  --fog-op: 0;
+  --overlay: rgba(8, 11, 18, 0.7);
   --tabbar-h: 64px;
+}
+
+/* 안개 새벽: 라이트 · 블루·라벤더, 유리질감 카드 + 안개 배경 */
+:root[data-theme="dawn"] {
+  --bg: #eaeefb;
+  --bg2: #eef0f9;
+  --bg-card: rgba(255, 255, 255, 0.55);
+  --bg-card-hover: rgba(255, 255, 255, 0.7);
+  --card-border: rgba(255, 255, 255, 0.7);
+  --fg: #2c3150;
+  --fg-dim: #7a8098;
+  --accent: #6f79d6;
+  --accent-deep: #5860b8;
+  --accent-soft: rgba(111, 121, 214, 0.16);
+  --on-accent: #ffffff;
+  --warn: #c07f3f;
+  --danger: #c0504f;
+  --radius: 20px;
+  --day-weight: 800;
+  --tabbar-bg: rgba(255, 255, 255, 0.62);
+  --tabbar-border: rgba(255, 255, 255, 0.7);
+  --sep: rgba(44, 49, 80, 0.08);
+  --orb-grad: radial-gradient(circle at 38% 34%, #c3c6ff, #8b8ff2 46%, var(--accent) 78%);
+  --orb-glow: rgba(111, 121, 214, 0.45);
+  --fog-1: radial-gradient(circle, #c9c3f0, transparent 70%);
+  --fog-2: radial-gradient(circle, #bcd0f2, transparent 70%);
+  --fog-3: radial-gradient(circle, #d6cef0, transparent 70%);
+  --fog-op: 1;
+  --overlay: rgba(28, 36, 48, 0.45);
+}
+
+/* 미니멀 선(禪): 라이트 · 라벤더 한 점, 가는 획의 day 숫자 */
+:root[data-theme="zen"] {
+  --bg: #faf9fc;
+  --bg2: #f2f1f6;
+  --bg-card: rgba(255, 255, 255, 0.75);
+  --bg-card-hover: #efedf4;
+  --card-border: rgba(38, 35, 47, 0.06);
+  --fg: #26232f;
+  --fg-dim: #918da0;
+  --accent: #7c74b0;
+  --accent-deep: #635a94;
+  --accent-soft: rgba(38, 35, 47, 0.1);
+  --on-accent: #ffffff;
+  --warn: #c07f3f;
+  --danger: #c0504f;
+  --radius: 14px;
+  --day-weight: 300;
+  --tabbar-bg: rgba(250, 249, 252, 0.72);
+  --tabbar-border: rgba(38, 35, 47, 0.06);
+  --sep: rgba(38, 35, 47, 0.08);
+  --orb-grad: radial-gradient(circle at 38% 34%, #c3bde4, var(--accent) 62%);
+  --orb-glow: rgba(124, 116, 176, 0.35);
+  --fog-1: transparent;
+  --fog-2: transparent;
+  --fog-3: transparent;
+  --fog-op: 0;
+  --overlay: rgba(28, 36, 48, 0.45);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body {
   height: 100%;
-  background: var(--bg);
+  background: linear-gradient(180deg, var(--bg), var(--bg2));
   color: var(--fg);
-  font-family: "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  font-family: "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
 }
 
+/* 안개 새벽 테마의 배경 안개 블롭. position:fixed + #app보다 앞선 DOM 순서라
+   #app(정적 배치) 아래로 자연스럽게 깔린다. classic/zen은 --fog-op:0이라 안 보임. */
+.fog {
+  position: fixed;
+  filter: blur(46px);
+  opacity: var(--fog-op);
+  pointer-events: none;
+}
+
+.fog-1 { top: -40px; left: -40px; width: 240px; height: 240px; background: var(--fog-1); }
+.fog-2 { top: 220px; right: -56px; width: 220px; height: 220px; background: var(--fog-2); filter: blur(52px); }
+.fog-3 { bottom: 90px; left: -40px; width: 200px; height: 200px; background: var(--fog-3); filter: blur(48px); }
+
 #app {
+  position: relative;
   max-width: 480px;
   margin: 0 auto;
   min-height: 100%;
@@ -52,9 +138,9 @@ textarea, select, input[type="range"] { font-family: inherit; }
   bottom: 0; left: 0; right: 0;
   height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
-  background: rgba(15, 20, 32, 0.92);
+  background: var(--tabbar-bg);
   backdrop-filter: blur(12px);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--tabbar-border);
   display: flex;
   justify-content: space-around;
   z-index: 10;
@@ -95,9 +181,12 @@ textarea, select, input[type="range"] { font-family: inherit; }
 
 .card {
   background: var(--bg-card);
+  border: 1px solid var(--card-border);
   border-radius: var(--radius);
   padding: 20px;
   margin-bottom: 16px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 3px rgba(20, 30, 45, 0.06);
 }
 
 .btn-primary {
@@ -106,7 +195,7 @@ textarea, select, input[type="range"] { font-family: inherit; }
   padding: 18px;
   border-radius: var(--radius);
   background: var(--accent);
-  color: #0c1118;
+  color: var(--on-accent);
   font-size: 18px;
   font-weight: 700;
   transition: transform 0.1s ease, background 0.2s ease;
@@ -142,7 +231,7 @@ textarea, select, input[type="range"] { font-family: inherit; }
 
 .day-number {
   font-size: 56px;
-  font-weight: 800;
+  font-weight: var(--day-weight);
   letter-spacing: -1px;
   color: var(--accent);
 }
@@ -279,13 +368,32 @@ textarea, select, input[type="range"] { font-family: inherit; }
   justify-content: center;
 }
 
+/* 은은하게 맥동하는 글로우 링 — 호흡 원 뒤에 깔리는 장식용 배경 (내용 전달 없음) */
+.breath-glow {
+  position: absolute;
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--orb-glow), transparent 68%);
+  animation: glowpulse 6s ease-in-out infinite;
+}
+
+@keyframes glowpulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.85; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breath-glow { animation: none; opacity: 0.7; }
+}
+
 .breath-circle {
   position: absolute;
   width: 140px;
   height: 140px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, var(--accent), var(--accent-deep));
-  box-shadow: 0 0 60px var(--accent-glow);
+  background: var(--orb-grad);
+  box-shadow: 0 0 60px var(--orb-glow);
   transform: scale(0.72);
 }
 
@@ -296,7 +404,7 @@ textarea, select, input[type="range"] { font-family: inherit; }
   z-index: 1;
   font-size: 18px;
   font-weight: 700;
-  color: #0c1118;
+  color: var(--on-accent);
 }
 
 .session-time {
@@ -359,7 +467,7 @@ textarea, select, input[type="range"] { font-family: inherit; }
   min-height: 110px;
   background: var(--bg-card);
   color: var(--fg);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--sep);
   border-radius: var(--radius);
   padding: 14px;
   font-size: 15px;
@@ -431,9 +539,11 @@ textarea, select, input[type="range"] { font-family: inherit; }
 .stat {
   flex: 1;
   background: var(--bg-card);
+  border: 1px solid var(--card-border);
   border-radius: var(--radius);
   padding: 14px 8px;
   text-align: center;
+  backdrop-filter: blur(8px);
 }
 
 .stat .stat-num { font-size: 22px; font-weight: 800; color: var(--accent); }
@@ -503,7 +613,7 @@ textarea, select, input[type="range"] { font-family: inherit; }
 
 .month-grid .mday.done {
   background: var(--accent);
-  color: #0c1118;
+  color: var(--on-accent);
   font-weight: 700;
 }
 
@@ -512,9 +622,11 @@ textarea, select, input[type="range"] { font-family: inherit; }
 /* ============ 일지 ============ */
 .journal-item {
   background: var(--bg-card);
+  border: 1px solid var(--card-border);
   border-radius: var(--radius);
   padding: 16px;
   margin-bottom: 12px;
+  backdrop-filter: blur(8px);
 }
 
 .journal-item .j-head {
@@ -535,7 +647,7 @@ textarea, select, input[type="range"] { font-family: inherit; }
   min-height: 90px;
   background: var(--bg);
   color: var(--fg);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--sep);
   border-radius: 10px;
   padding: 10px;
   font-size: 14px;
@@ -557,7 +669,7 @@ textarea, select, input[type="range"] { font-family: inherit; }
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(8, 11, 18, 0.7);
+  background: var(--overlay);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -838,41 +950,6 @@ textarea, select, input[type="range"] { font-family: inherit; }
 
 .ob-dot.active { background: var(--accent); transform: scale(1.2); }
 
-/* ============ 라이트 테마 ============ */
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg: #eef1f6;
-    --bg-card: #ffffff;
-    --bg-card-hover: #e4e9f1;
-    --fg: #1c2430;
-    --fg-dim: #5b6472;
-    --accent: #4f9d86;
-    --accent-deep: #3d7d6a;
-    --accent-glow: rgba(79, 157, 134, 0.25);
-    --warn: #c07f3f;
-    --danger: #c0504f;
-  }
-
-  .tabbar {
-    background: rgba(238, 241, 246, 0.92);
-    border-top-color: rgba(0, 0, 0, 0.08);
-  }
-
-  .card { box-shadow: 0 1px 3px rgba(20, 30, 45, 0.06); }
-
-  /* 강조색 위 텍스트는 라이트 테마에서 흰색이 더 또렷하다 */
-  .btn-primary { color: #fff; }
-  .breath-label { color: #fff; }
-  .grid-cell.done, .month-grid .mday.done { color: #0c1118; }
-
-  .reflection-box textarea,
-  .journal-item textarea {
-    border-color: rgba(0, 0, 0, 0.12);
-  }
-
-  .modal-overlay { background: rgba(28, 36, 48, 0.45); }
-}
-
 /* ============ 주간 추이 차트 ============ */
 .trend-chart {
   display: flex;
@@ -926,7 +1003,7 @@ textarea, select, input[type="range"] { font-family: inherit; }
   min-width: 0;
   background: var(--bg-card);
   color: var(--fg);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--sep);
   border-radius: 10px;
   padding: 10px 14px;
   font-size: 14px;
@@ -942,10 +1019,6 @@ textarea, select, input[type="range"] { font-family: inherit; }
   padding: 10px 12px;
   font-size: 14px;
   max-width: 42%;
-}
-
-@media (prefers-color-scheme: light) {
-  .journal-search { border-color: rgba(0, 0, 0, 0.12); }
 }
 
 /* ============ 명상 콘텐츠 (추천·낭독·자세·경구) ============ */
@@ -1005,3 +1078,44 @@ textarea, select, input[type="range"] { font-family: inherit; }
   color: var(--fg-dim);
   margin-top: 6px;
 }
+
+/* ============ 테마 선택 (스타일) ============ */
+.theme-picker { display: flex; flex-direction: column; gap: 10px; }
+
+.theme-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 2px solid var(--sep);
+  background: transparent;
+  font-family: inherit;
+}
+
+.theme-row.selected { border-color: var(--accent); background: var(--accent-soft); }
+
+.theme-swatch {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  flex: none;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.theme-row-body { flex: 1; min-width: 0; }
+.theme-row-name { display: block; font-size: 15px; font-weight: 700; color: var(--fg); }
+.theme-row-desc { display: block; font-size: 12px; color: var(--fg-dim); margin-top: 2px; }
+
+.theme-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex: none;
+  border: 2px solid var(--sep);
+  background: transparent;
+}
+
+.theme-row.selected .theme-dot { border-color: var(--accent); background: var(--accent); }

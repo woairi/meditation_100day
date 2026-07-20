@@ -12,8 +12,21 @@
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <script>
+    // 테마 깜빡임 방지: CSS/모듈이 로드되기 전에 저장된 테마를 동기적으로 적용한다.
+    try {
+      var raw = localStorage.getItem('meditation100.v1');
+      var data = raw ? JSON.parse(raw) : null;
+      document.documentElement.setAttribute('data-theme', (data && data.settings && data.settings.theme) || 'classic');
+    } catch (e) {
+      document.documentElement.setAttribute('data-theme', 'classic');
+    }
+  </script>
 </head>
 <body>
+  <div class="fog fog-1"></div>
+  <div class="fog fog-2"></div>
+  <div class="fog fog-3"></div>
   <main id="app">
     <section id="screen-home" class="screen" hidden></section>
     <section id="screen-session" class="screen" hidden></section>

@@ -10,6 +10,12 @@ const BREATH_LABELS = {
   coherent: '코히런트 · 자율신경 안정 (5.5·5.5)',
 };
 
+const THEMES = [
+  { key: 'classic', name: '기존 UI', desc: '다크 · 세이지 그린', swatch: 'linear-gradient(135deg,#1a2233,#7fb8a4)' },
+  { key: 'dawn', name: '안개 새벽', desc: '라이트 · 블루·라벤더', swatch: 'linear-gradient(135deg,#eaeefb,#6f79d6)' },
+  { key: 'zen', name: '미니멀 선(禪)', desc: '라이트 · 라벤더 한 점', swatch: 'linear-gradient(135deg,#faf9fc,#7c74b0)' },
+];
+
 const MINUTE_PRESETS = [3, 5, 10, 15, 20, 30, 45, 60];
 
 // 배열로 관리 — 객체 정수형 키('5','10')가 앞으로 정렬되는 것을 피한다.
@@ -26,6 +32,23 @@ export function mountSettings(el) {
 
   el.innerHTML = `
     <h1 class="screen-title">설정</h1>
+
+    <div class="card">
+      <div class="card-label">스타일</div>
+      <p class="setting-hint">앱 전체의 분위기를 골라 보세요.</p>
+      <div class="theme-picker">
+        ${THEMES.map((th) => `
+          <button type="button" class="theme-row ${th.key === s.theme ? 'selected' : ''}" data-theme-key="${th.key}">
+            <span class="theme-swatch" style="background:${th.swatch}"></span>
+            <span class="theme-row-body">
+              <span class="theme-row-name">${th.name}</span>
+              <span class="theme-row-desc">${th.desc}</span>
+            </span>
+            <span class="theme-dot"></span>
+          </button>
+        `).join('')}
+      </div>
+    </div>
 
     <div class="card">
       <div class="card-label">명상</div>
@@ -95,6 +118,15 @@ export function mountSettings(el) {
   `;
 
   renderBackupStatus(el);
+
+  el.querySelectorAll('.theme-row').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.themeKey;
+      store.updateSettings({ theme: key });
+      document.documentElement.dataset.theme = key;
+      el.querySelectorAll('.theme-row').forEach((b) => b.classList.toggle('selected', b === btn));
+    });
+  });
 
   const customRow = el.querySelector('#row-custom-min');
   const customInput = el.querySelector('#set-custom-min');

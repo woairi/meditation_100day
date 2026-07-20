@@ -7,6 +7,10 @@ import * as store from './store.js';
 import * as notify from './notify.js';
 import { maybeShowOnboarding } from './onboarding.js';
 
+// index.html의 인라인 스크립트가 이미 초기값을 세팅했지만, 설정 화면에서
+// 바뀐 값과 항상 동기화되도록 부팅 시 store 기준으로 다시 확인한다.
+document.documentElement.dataset.theme = store.getSettings().theme;
+
 const routes = {
   '': { el: 'screen-home', mount: mountHome },
   session: { el: 'screen-session', mount: mountSession, unmount: unmountSession },

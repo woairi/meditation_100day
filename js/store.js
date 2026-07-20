@@ -14,6 +14,7 @@ function freshState() {
     schemaVersion: CURRENT_SCHEMA,
     startedAt: null,
     settings: {
+      theme: 'classic', // 'classic' | 'dawn' | 'zen'
       soundType: 'rain',
       soundVolume: 0.5,
       breathingGuide: true,

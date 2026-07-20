@@ -297,6 +297,7 @@ function startMeditation(el, { guide, isFree, resume, preMood }) {
     <div class="session-wrap" id="session-tap">
       <div class="session-guide-theme" style="opacity:0.7">${isFree ? '자유 명상' : guide.title}</div>
       <div class="breath-stage">
+        <div class="breath-glow"></div>
         <div class="breath-circle" id="breath-circle"></div>
         <div class="breath-label" id="breath-label"></div>
       </div>
