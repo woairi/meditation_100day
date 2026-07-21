@@ -263,6 +263,7 @@ textarea, select, input[type="range"] { font-family: inherit; }
   padding: 8px 18px;
   font-size: 15px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .today-status {
@@ -1119,3 +1120,75 @@ textarea, select, input[type="range"] { font-family: inherit; }
 }
 
 .theme-row.selected .theme-dot { border-color: var(--accent); background: var(--accent); }
+
+/* ============ 미니멀 선 테마 전용 홈 ============ */
+.zen-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: var(--fg-dim);
+  font-weight: 600;
+  padding-top: 12px;
+}
+
+.zen-day-block { margin-top: 40px; }
+
+.zen-day-kicker {
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: var(--fg-dim);
+  font-weight: 600;
+}
+
+.zen-day-number {
+  font-size: 80px;
+  font-weight: var(--day-weight);
+  letter-spacing: -3px;
+  line-height: 0.9;
+  margin-top: 4px;
+  color: var(--fg);
+}
+
+.zen-progress { margin-top: 28px; }
+
+.zen-progress-track {
+  height: 2px;
+  background: var(--accent-soft);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.zen-progress-fill { height: 100%; background: var(--accent); }
+
+.zen-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--fg-dim);
+  margin-top: 10px;
+}
+
+.zen-guide { margin-top: 32px; }
+
+.zen-guide-theme {
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.zen-guide-title {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  margin-top: 8px;
+}
+
+.zen-guide-text {
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--fg-dim);
+  margin-top: 8px;
+}
