@@ -1192,3 +1192,31 @@ textarea, select, input[type="range"] { font-family: inherit; }
   color: var(--fg-dim);
   margin-top: 8px;
 }
+
+/* ============ PWA 업데이트 배너 ============ */
+.update-banner {
+  position: fixed;
+  top: max(env(safe-area-inset-top), 12px);
+  left: 16px;
+  right: 16px;
+  width: fit-content;
+  margin: 0 auto;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  padding: 8px 8px 8px 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  font-size: 12.5px;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  backdrop-filter: blur(8px);
+  animation: fadein 0.3s ease;
+}
+
+.update-banner .btn-small { background: var(--accent); color: var(--on-accent); font-weight: 700; white-space: nowrap; }

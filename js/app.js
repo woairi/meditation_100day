@@ -5,6 +5,7 @@ import { mountJournal } from './screens/journal.js';
 import { mountSettings } from './screens/settings.js';
 import * as store from './store.js';
 import * as notify from './notify.js';
+import * as update from './update.js';
 import { maybeShowOnboarding } from './onboarding.js';
 
 // index.html의 인라인 스크립트가 이미 초기값을 세팅했지만, 설정 화면에서
@@ -71,6 +72,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js')
     .then(() => notify.init())
     .catch(() => {});
+  update.init();
 }
 
 // 브라우저가 용량 정리 시 기록을 임의로 지우지 않도록 보호 요청 (미지원 시 무시)
