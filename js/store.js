@@ -1,5 +1,4 @@
 // localStorage 유일 접근점. 다른 모듈은 반드시 이 모듈을 통해 상태를 읽고 쓴다.
-// TODO(v1.1): JSON 내보내기/가져오기로 기기 간 이전 지원
 
 const KEY = 'meditation100.v1';
 const SESSION_KEY = 'meditation100.activeSession';
